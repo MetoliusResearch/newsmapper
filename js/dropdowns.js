@@ -1,8 +1,4 @@
-// Dropdowns module for NewsMapper
-// Implements resource, region, and country dropdowns
-
 export function setupDropdowns() {
-  // Dropdown setup logic from gdelt.js
   function setupDropdown(inputId, dropdownId, options, groupLabels = []) {
     const input = document.getElementById(inputId);
     const dropdown = document.getElementById(dropdownId);

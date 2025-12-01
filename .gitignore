@@ -43,3 +43,9 @@ Thumbs.db
 
 # Reference folder (not needed for production)
 042_reference/
+
+# GitHub internal files (not needed for deployment)
+.github/copilot-instructions.md
+.nojekyll
+.prettierrc
+

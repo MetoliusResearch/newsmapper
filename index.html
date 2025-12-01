@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; style-src 'self' https://unpkg.com 'unsafe-inline'; img-src 'self' https://*.tile.openstreetmap.org https://server.arcgisonline.com data:; connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org; frame-src https://api.gdeltproject.org; font-src 'self' data:;">
     <title>Extractives News Mapper</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <!-- HEADER (top bar) -->
     <div class="top-bar">
       <span class="top-bar-title">Extractives NewsMapper 1.0</span>
       <div class="header-right">
@@ -24,7 +25,6 @@
     <main>
         <section class="section-wrapper section-lightgray">
             <div class="floating-box">
-                <!-- Query Title and Info Button -->
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <span id="sectionTitleQuery">Query</span>
                   <button class="info-btn" id="queryInfoBtn" title="About Query" aria-label="Query Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
@@ -34,7 +34,6 @@
                     </svg>
                   </button>
                 </div>
-                <!-- Query Dropdowns and Custom Input (042 version layout) -->
                 <div id="queryWindow" style="display:flex;align-items:flex-end;gap:1em;flex-wrap:wrap;margin-top:0.7em;">
                   <div style="display:flex;flex-direction:row;gap:0.5em;align-items:flex-end;flex-wrap:wrap;">
                     <div class="custom-dropdown">
@@ -61,9 +60,7 @@
                     <button id="resetQueryBtn" type="button" class="gdelt-open-btn query-time-btn" style="min-width:60px;">Reset</button>
                     <button id="shareQueryBtn" type="button" class="gdelt-open-btn query-time-btn" style="min-width:60px;" title="Copy shareable link" onclick="window.copyShareableURL()">🔗 Share</button>
                   </div>
-                  <input id="gdeltMapQuery" name="gdeltMapQuery" type="hidden" />
                 </div>
-                <!-- Query Results window as a separate floating box below query, above news/map -->
                 <div class="floating-box" id="queryResultsWindow" style="padding:0.5em 1em !important;">
                   <div id="resultsHeaderRow" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;cursor:pointer;" onclick="toggleResultsCollapse()">
                     <span id="resultsHeader" style="font-weight:600;font-size:1.08em;margin:0;padding:0;">Results</span>
@@ -78,7 +75,6 @@
                 </div>
             </div>
             <div class="floating-box">
-                <!-- News Map Section -->
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <span id="mapTitle">News Map</span>
                   <button class="info-btn" id="mapInfoBtn" title="About News Map" aria-label="News Map Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
@@ -92,6 +88,9 @@
                     <div id="gdeltMapLoader" class="loader-overlay" style="display:none;">
                       <div class="loader-spinner"></div>
                     </div>
+                    <div id="gdeltMapPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
+                      Please enter a search term or select a resource, region, or country to view
+                    </div>
                     <div class="map-container"><div id="map"></div></div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
@@ -104,9 +103,8 @@
                     <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltMap', 'Map', event)">&lt;&gt;</button>
                   </div>
                 </div>
-            </div> <!-- .floating-box (map) -->
+            </div>
             <div class="floating-box">
-                <!-- Headlines Section -->
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <span id="headlinesTitle">Headlines</span>
                   <button class="info-btn" id="headlinesInfoBtn" title="About Headlines" aria-label="Headlines Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
@@ -121,8 +119,8 @@
                     <div class="loader-spinner"></div>
                   </div>
                   <iframe id="gdeltHeadlines" width="100%" height="500" title="GDELT Headlines" allowfullscreen src="" tabindex="0"></iframe>
-                  <div id="gdeltHeadlinesEmptyQuery" style="display:none;position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:rgba(255,255,255,0.95);color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
-                    Please enter a search term or select a resource, region, or country to view news headlines.
+                  <div id="gdeltHeadlinesPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
+                    Please enter a search term or select a resource, region, or country to view
                   </div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
@@ -140,7 +138,6 @@
                 </div>
             </div>
             <div class="floating-box">
-                <!-- Sentiment Section -->
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <span id="sentimentTitle">Sentiment</span>
                   <button class="info-btn" id="sentimentInfoBtn" title="About Sentiment Timeline" aria-label="Sentiment Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
@@ -150,10 +147,15 @@
                     </svg>
                   </button>
                 </div>
-                <div id="gdeltSentimentLoader" class="loader-overlay" style="display:none;">
-                  <div class="loader-spinner"></div>
+                <div style="position:relative;">
+                  <div id="gdeltSentimentLoader" class="loader-overlay" style="display:none;">
+                    <div class="loader-spinner"></div>
+                  </div>
+                  <div id="gdeltSentimentPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
+                    Please enter a search term or select a resource, region, or country to view
+                  </div>
+                  <iframe id="gdeltSentiment" width="100%" height="400" title="GDELT Sentiment" allowfullscreen src="" tabindex="0"></iframe>
                 </div>
-                <iframe id="gdeltSentiment" width="100%" height="400" title="GDELT Sentiment" allowfullscreen src="" tabindex="0"></iframe>
                 <div class="gdelt-result-row" style="margin-top: 1.5em; margin-bottom: 1em;">
                   <div id="sentimentTimeButtons" style="display:flex;gap:0.5em;">
                     <button class="gdelt-open-btn" onclick="setSentimentTime('1y')" title="Show sentiment for last year">1Y</button>
@@ -176,49 +178,6 @@
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script type="module" src="main.js"></script>
     <script>
-      // Update the 'Open Map' link to use the old GDELT map format and open in a new tab
-      function updateGdeltMapQueryLink() {
-        var queryBox = document.getElementById('gdeltMapQuery');
-        var link = document.getElementById('gdeltMapQueryLink');
-        var timespan = window._gdeltTimespanMap || '1d';
-        if (queryBox && link) {
-          var query = queryBox.value || '';
-          // If query is empty, try to build it from dropdowns (fallback)
-          if (!query.trim()) {
-            var resource = document.getElementById('resourceInput')?.value?.trim() || '';
-            var region = document.getElementById('regionInput')?.value?.trim() || '';
-            var country = document.getElementById('countryInput')?.value?.trim() || '';
-            var custom = document.getElementById('customInput')?.value?.trim() || '';
-            var parts = [];
-            if (custom) parts.push(custom);
-            if (resource) parts.push(resource);
-            if (region && region !== 'Global') parts.push(region);
-            if (country) parts.push(country);
-            query = parts.join(' AND ');
-          }
-          // Use correct GDELT map link (old format):
-          var url = 'https://www.gdeltproject.org/maps/geonewsmap.html?query=' + encodeURIComponent(query) + '&timespan=' + timespan;
-          link.href = url;
-        }
-      }
-      document.addEventListener('DOMContentLoaded', function() {
-        updateGdeltMapQueryLink();
-        var queryBox = document.getElementById('gdeltMapQuery');
-        if (queryBox) {
-          queryBox.addEventListener('input', updateGdeltMapQueryLink);
-          queryBox.addEventListener('change', updateGdeltMapQueryLink);
-        }
-        // Also update on timespan change
-        window._updateGdeltMapQueryLink = updateGdeltMapQueryLink;
-      });
-      // Patch setMapTime to update the link as well
-      var origSetMapTime = window.setMapTime;
-      window.setMapTime = function(timespan) {
-        if (origSetMapTime) origSetMapTime(timespan);
-        if (window._updateGdeltMapQueryLink) window._updateGdeltMapQueryLink();
-      };
-      
-      // Toggle Results collapse/expand
       function toggleResultsCollapse() {
         const content = document.getElementById('resultsContent');
         const icon = document.getElementById('resultsCollapseIcon');
@@ -233,13 +192,12 @@
         }
       }
     </script>
-    <!-- Info popups and overlays (same as previous version) -->
     <div id="headerInfoOverlay" class="header-info-overlay" style="display:none;"></div>
     <div id="headerInfoPopup" class="header-info-popup" style="display:none;">
       <button class="header-info-close-x" id="headerInfoClose" title="Close">&times;</button>
-      <div class="header-info-header">About NewsMapper</div>
+      <div class="header-info-header">About ExtractiveNewsMapper - ENM</div>
       <div class="header-info-body">
-        NewsMapper is an interactive tool for exploring global news events related to extractive industries, land use, and environmental issues using the GDELT database.<br><br>
+        NewsMapper is an interactive tool for exploring global news events related to extractive industries, land use conflict, and environmental issues using the GDELT database. ENM was developed with private resources by Metolius Research.<br><br>
         <ul>
           <li>Use the <b>Query</b> box to select a resource, region, or country, or enter your own custom search terms.</li>
           <li>The <b>News Map</b> visualizes the locations of recent news events matching your query.</li>
@@ -305,8 +263,6 @@
       </div>
     </div>
     <script>
-      // Google Translate is enabled by default on Headlines iframe (&trans=googtrans parameter)
-      // The translate bar appears at the bottom of the GDELT page - users can scroll down to access it
     </script>
 </body>
 </html>

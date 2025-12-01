@@ -1,6 +1,3 @@
-// Popups and info overlays module for NewsMapper
-// Handles info popups and overlays
-
 export function setupPopups() {
   function setupInfoPopup(btnId, popupId, overlayId, closeId) {
     const btn = document.getElementById(btnId);

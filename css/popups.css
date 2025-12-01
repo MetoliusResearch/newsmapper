@@ -1,6 +1,3 @@
-/* Popups and overlay styles for NewsMapper */
-/* Move popup, info-popup, overlay, and related styles from original styles.css here. */
-
 .query-info-popup,
 .header-info-popup {
   position: fixed;

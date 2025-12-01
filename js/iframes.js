@@ -1,13 +1,9 @@
-// Iframe loader and embed logic module for NewsMapper
-// Handles iframe loading, loader overlays, and embed code popups
-
 export function setupIframes() {
   window.setIframeWithLoader = function (iframeId, loaderId, url) {
     const iframe = document.getElementById(iframeId);
     const loader = document.getElementById(loaderId);
     if (!iframe) return;
     if (loader) {
-      // Position loader overlay exactly over the iframe
       const parent = iframe.parentElement;
       if (parent && parent.style.position !== 'relative') {
         parent.style.position = 'relative';
@@ -19,7 +15,6 @@ export function setupIframes() {
     iframe.style.visibility = 'hidden';
     iframe.src = url;
     
-    // Set a timeout to hide loader after 2 seconds as fallback
     const timeoutId = setTimeout(() => {
       if (loader) loader.style.display = 'none';
       iframe.style.visibility = 'visible';
@@ -34,9 +29,7 @@ export function setupIframes() {
   window.copyEmbedCode = function (section, event) {
     let url = '';
     if (section === 'gdeltMap') {
-      // Use the lastMapUrl (iframe URL, not the geojson url)
       url = window.lastMapUrl;
-      // Show the GeoJSON URL in the embed popup for the map
       const queryBox = document.getElementById('gdeltMapQuery');
       const query = queryBox ? queryBox.value : 'petroleum AND lng';
       const timespan = window._gdeltTimespanMap || '1d';
@@ -82,7 +75,6 @@ export function setupIframes() {
         popup.style.maxWidth = '90vw';
       }
       document.body.appendChild(popup);
-      // Copy the iframe code to clipboard as before
       const embedCode = `<iframe src="${url}" scrolling="no" width="100%" frameborder="0" height="500"></iframe>`;
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(embedCode);
@@ -140,7 +132,6 @@ export function setupIframes() {
     document.body.appendChild(popup);
   };
   window.copyAndConfirmLink = function (iframeId) {
-    // For map, open the Open Map link in a new tab
     if (iframeId === 'gdeltMap') {
       var link = document.getElementById('gdeltMapQueryLink');
       if (link && link.href) {
@@ -148,7 +139,6 @@ export function setupIframes() {
         return;
       }
     }
-    // For headlines/sentiment, open the iframe src in a new tab
     const iframe = document.getElementById(iframeId);
     if (iframe && iframe.src) {
       window.open(iframe.src, '_blank', 'noopener');

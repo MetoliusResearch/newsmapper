@@ -9,12 +9,10 @@ let leafletHeatLayer = null;
 let currentMapMode = 'points'; // default to 'points' (Newsmap), not 'heatmap'
 let leafletBaseLayer = null;
 
-// Helper to update the Leaflet map points based on query and timespan
 window.updateLeafletMapPoints = function (query, timespan) {
   if (!leafletMap) return;
   const loader = document.getElementById('gdeltMapLoader');
   if (loader) loader.style.display = 'flex';
-  // Always encode query for geojson endpoint
   const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
   console.log('[DEBUG] Fetching GeoJSON:', url);
   fetch(url)
@@ -27,7 +25,6 @@ window.updateLeafletMapPoints = function (query, timespan) {
       if (leafletHeatLayer) {
         leafletMap.removeLayer(leafletHeatLayer);
       }
-      // Prepare heatmap points once
       const heatPoints = (geojson.features || [])
         .map((f) => {
           const coords = f.geometry && f.geometry.coordinates;
@@ -38,31 +35,23 @@ window.updateLeafletMapPoints = function (query, timespan) {
           return [lat, lng, intensity];
         })
         .filter(Boolean);
-      // --- SIMPLIFIED TWO-BIN POINT SIZE AND LEGEND (count=1, and count≥75th percentile) ---
-      // Collect all counts
       const counts = (geojson.features || []).map((f) =>
         f.properties && typeof f.properties.count === 'number' ? f.properties.count : 1
       );
-      // Calculate 75th percentile (x)
       let x = 1;
       if (counts.length > 0) {
         const sorted = counts.slice().sort((a, b) => a - b);
         const idx = Math.floor(0.75 * sorted.length);
         x = sorted[idx];
       }
-      // Ensure x is at least 2 (so count=1 is always the lower bin)
       if (x < 2) x = 2;
-      // Define radii
-      const RADIUS_ONE = 5; // px for count=1
-      const RADIUS_UPPER = 16; // px for count≥x
-      // Point size function: only two bins
+      const RADIUS_ONE = 5;
+      const RADIUS_UPPER = 16;
       function getRadiusForCount(count) {
         if (count === 1) return RADIUS_ONE;
         if (count >= x) return RADIUS_UPPER;
-        // All other counts (2..x-1) use small dot for visual clarity
         return RADIUS_ONE;
       }
-      // Replace pointToLayer to use only two dot sizes
       leafletGeoJsonLayer = L.geoJSON(geojson, {
         pointToLayer: (feature, latlng) => {
           const count =
@@ -82,7 +71,6 @@ window.updateLeafletMapPoints = function (query, timespan) {
         onEachFeature: (feature, layer) => {
           let props = feature.properties || {};
           let html = '';
-          // Popup header with location name, full width, ellipsis if long
           let locationName = props.name || '';
           let eventCount = typeof props.count !== 'undefined' ? props.count : '';
           if (locationName) {
@@ -161,9 +149,6 @@ window.updateLeafletMapPoints = function (query, timespan) {
           html += `<div class='popup-inner'>${innerHtml}</div>`;
           layer.bindPopup(html, { closeButton: false });
 
-          // --- Remove the fixed info box: it is not needed, only show floating tooltip on hover ---
-          // (Remove all code that creates or updates 'leaflet-hover-info-box')
-          // --- Add hover event to show number of events as a floating tooltip ---
           const count = typeof props.count !== 'undefined' ? props.count : 1;
           let hoverTooltip;
           layer.on('mouseover', function (e) {
@@ -200,24 +185,16 @@ window.updateLeafletMapPoints = function (query, timespan) {
         radius: 12, // keep smaller radius
         blur: 16,
         maxZoom: 12,
-        minOpacity: 0.65, // slightly increased from 0.55
-        gradient: { 0.2: '#ffcccc', 0.4: '#ff8888', 0.7: '#ff3333', 1.0: '#ff2d2d' } // slightly more vivid
+        minOpacity: 0.65,
+        gradient: { 0.2: '#ffcccc', 0.4: '#ff8888', 0.7: '#ff3333', 1.0: '#ff2d2d' }
       });
 
-      // Build legend bins and radii for display
-      // const legendBreaks = [
-      //   { label: '1', radius: RADIUS_ONE },
-      //   { label: `≥${x}`, radius: RADIUS_UPPER }
-      // ];
-      // --- LEGEND: Only two entries ---
-      // Remove any existing legend
       if (window._leafletPointSizeLegend) {
         leafletMap.removeControl(window._leafletPointSizeLegend);
         window._leafletPointSizeLegend = null;
       }
       const oldLegend = document.querySelector('.point-size-legend');
       if (oldLegend && oldLegend.parentNode) oldLegend.parentNode.removeChild(oldLegend);
-      // Add new legend
       const PointSizeLegend = L.Control.extend({
         options: { position: 'bottomright' },
         onAdd: function () {
@@ -233,7 +210,6 @@ window.updateLeafletMapPoints = function (query, timespan) {
           div.style.display = 'flex';
           div.style.flexDirection = 'column';
           div.style.alignItems = 'flex-start';
-          // Dynamically match legend width to map mode selection bar
           const mapModePanel = document.querySelector('.leaflet-control-custom');
           let legendWidth = '210px';
           if (mapModePanel) {
@@ -268,7 +244,6 @@ window.updateLeafletMapPoints = function (query, timespan) {
       leafletMap.addControl(legendInstance);
       window._leafletPointSizeLegend = legendInstance;
 
-      // Only add the selected layer
       if (currentMapMode === 'heatmap') {
         leafletHeatLayer.addTo(leafletMap);
         console.log('[DEBUG] Added heat layer to map');
@@ -285,21 +260,18 @@ window.updateLeafletMapPoints = function (query, timespan) {
     });
 };
 
-// --- Default queries for each section ---
-const DEFAULT_MAP_QUERY = 'petroleum OR lng'; // geojson endpoint format
-const DEFAULT_HEADLINES_QUERY = 'petroleum OR lng'; // GDELT iframe format
-const DEFAULT_SENTIMENT_QUERY = 'petroleum OR lng'; // GDELT iframe format
+const DEFAULT_MAP_QUERY = 'petroleum OR lng';
+const DEFAULT_HEADLINES_QUERY = 'petroleum OR lng';
+const DEFAULT_SENTIMENT_QUERY = 'petroleum OR lng';
 const DEFAULT_MAP_TIMESPAN = '1d';
 const DEFAULT_HEADLINES_TIMESPAN = '1d';
 const DEFAULT_SENTIMENT_TIMESPAN = '1y';
 const DEFAULT_HEADLINES_MAX = 50;
 
-// --- Track current timespans for each section ---
 window._gdeltTimespanMap = window._gdeltTimespanMap || DEFAULT_MAP_TIMESPAN;
 window._gdeltTimespanHeadlines = window._gdeltTimespanHeadlines || DEFAULT_HEADLINES_TIMESPAN;
 window._gdeltTimespanSentiment = window._gdeltTimespanSentiment || DEFAULT_SENTIMENT_TIMESPAN;
 
-// Helper to update all section titles
 function updateSectionTitles(query, timespan) {
   const mapTitle = document.getElementById('sectionTitleMap');
   if (mapTitle) mapTitle.textContent = `Map: ${query} (${timespan})`;
@@ -310,35 +282,27 @@ function updateSectionTitles(query, timespan) {
     sentimentTitle.textContent = `Sentiment: ${query} (${timespan === '1y' ? 'last year' : timespan})`;
 }
 
-// --- Query Window logic ---
 document.addEventListener('DOMContentLoaded', () => {
-  // --- Restore Query Dropdowns and Query Box logic ---
   setupDropdowns();
   setupGdeltQuery();
   setupPopups();
   setupIframes();
 
-  // --- Move Query title and info button to top of query section ---
   const querySection = document.getElementById('gdeltQuerySection');
   const queryTitle = document.getElementById('sectionTitleQuery');
   const infoBtn = document.getElementById('queryInfoBtn');
   if (querySection && queryTitle && infoBtn) {
-    // Remove infoBtn from its current parent
     if (infoBtn.parentNode) infoBtn.parentNode.removeChild(infoBtn);
-    // Remove queryTitle from its current parent
     if (queryTitle.parentNode) queryTitle.parentNode.removeChild(queryTitle);
-    // Create a flex container for title and info button
     const titleBar = document.createElement('div');
     titleBar.style.display = 'flex';
     titleBar.style.alignItems = 'center';
     titleBar.style.gap = '0.7em';
     titleBar.appendChild(queryTitle);
     titleBar.appendChild(infoBtn);
-    // Insert at the top of the query section
     querySection.insertBefore(titleBar, querySection.firstChild);
   }
 
-  // --- Query Window logic ---
   const resetBtn = document.getElementById('resetQueryBtn');
   const gdeltQueryResultBox = document.getElementById('gdeltQueryResultBox');
   const geojsonUrlBox = document.getElementById('geojsonUrlBox');
@@ -350,11 +314,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const customInput = document.getElementById('customInput');
   const gdeltMapQuery = document.getElementById('gdeltMapQuery');
 
-  // Default query and timespan
   const defaultQuery = 'petroleum OR lng';
   const defaultTimespan = '7d';
 
-  // --- Query logic from gdelt.js ---
   const resourceMap = {
     'Fossil Fuels': '(oil OR petroleum OR gas OR lng OR coal)',
     'Oil & Gas': '(oil OR gas)',
@@ -403,10 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return finalQuery || defaultQuery;
   }
 
-  // Helper to update the Query Results window
   function updateQueryResultsWindow(query = defaultQuery, timespan = defaultTimespan) {
     gdeltQueryResultBox.textContent = query;
-    // Helper to create a result row with an Open button (no label at start)
     function createResultRow(url) {
       const row = document.createElement('div');
       row.className = 'query-result-row';
@@ -422,11 +382,9 @@ document.addEventListener('DOMContentLoaded', () => {
       row.appendChild(openBtn);
       return row;
     }
-    // Clear previous content
     geojsonUrlBox.innerHTML = '';
     headlinesUrlBox.innerHTML = '';
     timelineUrlBox.innerHTML = '';
-    // Add new rows with Open buttons (no label)
     geojsonUrlBox.appendChild(
       createResultRow(
         `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`
@@ -444,14 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 
-  // --- Dropdowns and custom input logic ---
-  // function clearOtherInputs(active) {
-  //   if (active !== resourceInput) resourceInput.value = '';
-  //   if (active !== regionInput) regionInput.value = '';
-  //   if (active !== countryInput) countryInput.value = '';
-  //   if (active !== customInput) customInput.value = '';
-  // }
-
   function updateAllFromInputs() {
     const query = buildQueryFromInputs();
     const timespan = window._gdeltTimespanMap || defaultTimespan;
@@ -463,9 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSectionTitles(query, timespan);
   }
 
-  // Attach event listeners to dropdowns and custom input
   function handleDropdownInput(activeInput) {
-    // If custom is filled, clear dropdowns
     if (activeInput === customInput && customInput.value.trim() !== '') {
       if (resourceInput) resourceInput.value = '';
       if (regionInput) regionInput.value = '';
@@ -489,10 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
     customInput.addEventListener('input', () => handleDropdownInput(customInput));
   }
 
-  // On page load, set query from any pre-filled input
   updateAllFromInputs();
 
-  // Reset button logic: always reset to default and update all
   resetBtn.addEventListener('click', () => {
     if (resourceInput) resourceInput.value = '';
     if (regionInput) regionInput.value = '';
@@ -504,11 +450,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSectionTitles(defaultQuery, defaultTimespan);
   });
 
-  // --- Remove any old query debug/info boxes ---
   const oldDebug = document.getElementById('queryDebugBox');
   if (oldDebug && oldDebug.parentNode) oldDebug.parentNode.removeChild(oldDebug);
 
-  // --- On page load, set all three sections to their default queries/formats ---
   window.updateLeafletMapPoints(DEFAULT_MAP_QUERY, DEFAULT_MAP_TIMESPAN);
   if (window.updateHeadlinesSection)
     window.updateHeadlinesSection(
@@ -526,7 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
     DEFAULT_SENTIMENT_TIMESPAN
   );
 
-  // Add map attribution after map is initialized (append to mapDiv, not inside map tiles)
   function addMapAttribution() {
     let attr = document.getElementById('leaflet-map-attribution');
     if (!attr) {
@@ -547,12 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   setTimeout(addMapAttribution, 800);
 
-  // Remove translate button below the map if present
   var translateBtnLocal = document.getElementById('translateBtn');
   if (translateBtnLocal && translateBtnLocal.parentNode)
     translateBtnLocal.parentNode.removeChild(translateBtnLocal);
 
-  // Leaflet map initialization
   const mapDiv = document.getElementById('map');
   if (mapDiv) {
     if (window._leafletMapInitialized) return;
@@ -565,10 +506,9 @@ document.addEventListener('DOMContentLoaded', () => {
       boxZoom: true,
       keyboard: true,
       dragging: true,
-      zoomSnap: 0.1, // Allow smooth/fractional zoom
-      zoomDelta: 0.5 // Each click/keypress changes zoom by 0.5
-    }).setView([20, 10], 1.6); // Set initial zoom level to 1.5 (fractional allowed)
-    // Only ESRI Gray base layer
+      zoomSnap: 0.1,
+      zoomDelta: 0.5
+    }).setView([20, 10], 1.6);
     leafletBaseLayer = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
       {
@@ -577,8 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     );
     leafletBaseLayer.addTo(leafletMap);
-    // Remove OSM and base layer selector
-    // Add custom toggle control
     const MapModeControl = L.Control.extend({
       options: { position: 'topright' },
       onAdd: function () {
@@ -586,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
           'div',
           'leaflet-bar leaflet-control leaflet-control-custom'
         );
-        container.id = 'mapModePanel'; // Add ID for width calculation
+        container.id = 'mapModePanel';
         container.style.background = '#fff';
         container.style.padding = '0.3em 0.7em';
         container.style.fontSize = '1em';
@@ -619,7 +557,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateColors();
           }
         };
-        // Ensure color updates on re-render
         setTimeout(updateColors, 0);
         L.DomEvent.disableClickPropagation(container);
         return container;
@@ -627,10 +564,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     leafletMap.addControl(new MapModeControl());
 
-    // --- Add Point Size Legend (vertical, matching map point sizes) ---
-    // REMOVE STATIC LEGEND CODE: Only use dynamic legend after data load
-    // Initial points: petroleum OR lng, 7d
-    // Use the same logic as the dropdowns: get the value from the query box if present, else use default
     const queryBox = document.getElementById('gdeltMapQuery');
     const initialQuery = queryBox && queryBox.value ? queryBox.value : 'petroleum OR lng';
     window.updateLeafletMapPoints(initialQuery, '7d');
@@ -644,8 +577,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Hook into query/timespan changes to update map points ---
-  // Listen for query changes
   const queryBox = document.getElementById('gdeltMapQuery');
   if (queryBox) {
     let lastQuery = queryBox.value || 'petroleum OR lng';
@@ -653,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateMapFromQuery = () => {
       const query = queryBox.value || 'petroleum OR lng';
       const timespan = window._gdeltTimespanMap || '1d';
-      // Only update if query or timespan actually changed
       if (query !== lastQuery || timespan !== lastTimespan) {
         window.updateLeafletMapPoints(query, timespan);
         if (window.updateHeadlinesSection) window.updateHeadlinesSection(query, timespan);
@@ -663,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lastTimespan = timespan;
       }
     };
-    // Use both input and change events, but debounce to avoid double calls
     let debounceTimer = null;
     const debouncedUpdate = () => {
       clearTimeout(debounceTimer);
@@ -673,7 +602,6 @@ document.addEventListener('DOMContentLoaded', () => {
     queryBox.addEventListener('change', debouncedUpdate);
   }
 
-  // Listen for map time button changes
   const mapTimeButtons = document.getElementById('mapTimeButtons');
   if (mapTimeButtons) {
     mapTimeButtons.addEventListener('click', function (e) {
@@ -683,7 +611,6 @@ document.addEventListener('DOMContentLoaded', () => {
             (document.getElementById('gdeltMapQuery') || {}).value || 'petroleum OR lng';
           const timespan = window._gdeltTimespanMap || '1d';
           window.updateLeafletMapPoints(query, timespan);
-          // Update section titles
           updateSectionTitles(
             query,
             timespan,
@@ -695,13 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- In the legend, change label above points to just 'Events' ---
-  // (This was already set in the PointSizeLegend code above)
-
-  // Dynamic section title updating and default query already handled above
 });
 
-// Listen for map query/timespan changes and update points
 window.setMapTime = function (timespan) {
   window._gdeltTimespanMap = timespan;
   const queryBox = document.getElementById('gdeltMapQuery');
@@ -711,5 +633,3 @@ window.setMapTime = function (timespan) {
   if (window.updateSentimentSection) window.updateSentimentSection(query, '1y');
   updateSectionTitles(query, timespan);
 };
-
-// --- Query Window logic: moved inside DOMContentLoaded ---

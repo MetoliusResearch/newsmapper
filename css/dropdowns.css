@@ -1,9 +1,8 @@
-/* Dropdown styles for NewsMapper - 042 style */
 .custom-dropdown {
   position: relative;
   width: 180px;
-  z-index: 100; /* Ensure dropdowns appear above other elements */
-  overflow: visible !important; /* Prevent clipping of dropdowns */
+  z-index: 100;
+  overflow: visible !important;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -44,7 +43,7 @@
   background: #fff;
   border: 1px solid #bbb;
   border-radius: 6px;
-  z-index: 99999; /* High z-index to ensure dropdowns appear above all iframes and overlays */
+  z-index: 99999;
   max-height: 200px;
   overflow-y: auto;
   box-shadow: 0 2px 8px rgba(34, 34, 59, 0.07);
@@ -98,7 +97,7 @@
   background: #fff;
   border: 1px solid #ccc;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 100000 !important; /* Even higher z-index to ensure above all overlays */
+  z-index: 100000 !important;
   max-height: 300px;
   overflow-y: auto;
   font-size: 1rem;
@@ -144,7 +143,6 @@
   }
 }
 
-/* Section styling for consistent layout */
 .section-box {
   width: 70%;
   max-width: 1000px;
@@ -184,7 +182,6 @@
   }
 }
 
-/* Remove .query-section-container rules if present */
 .query-section-container {
   display: unset;
   max-width: unset;
