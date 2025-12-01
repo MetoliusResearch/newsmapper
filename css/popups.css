@@ -1,0 +1,50 @@
+/* Popups and overlay styles for NewsMapper */
+/* Move popup, info-popup, overlay, and related styles from original styles.css here. */
+
+.query-info-popup,
+.header-info-popup {
+  position: fixed;
+  width: 600px;
+  max-width: 95vw;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #bbb;
+  box-shadow: 0 2px 8px rgba(34, 34, 59, 0.13);
+  padding: 2em 2em 1.5em 2em;
+  border-radius: 10px;
+  z-index: 10001;
+}
+.query-info-header,
+.header-info-header {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin-bottom: 0.7em;
+}
+.query-info-body,
+.header-info-body {
+  font-size: 1.05em;
+}
+.query-info-close-x,
+.header-info-close-x {
+  position: absolute;
+  top: 10px;
+  right: 18px;
+  font-size: 1.5em;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.header-info-overlay,
+.query-info-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.08);
+  z-index: 10000;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}

@@ -1,0 +1,302 @@
+/* Main NewsMapper CSS imports modularized */
+@import url('./css/layout.css');
+@import url('./css/dropdowns.css');
+@import url('./css/iframes.css');
+@import url('./css/popups.css');
+@import url('./css/loader.css');
+
+/* Query Section Styling - 042 Version */
+#sectionTitleQuery {
+  font-weight: 600;
+  font-size: 1.08em;
+}
+.info-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.5em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+/* Query Window - 042 Version */
+#queryWindow {
+  display: flex;
+  align-items: flex-end;
+  gap: 1em;
+  margin-bottom: 0.7em;
+  flex-wrap: wrap;
+}
+
+/* Query time buttons: 1d, 7d, Reset */
+.query-time-btn {
+  height: 34px; /* Match input height more closely */
+  min-width: 60px;
+  padding: 0 14px;
+  font-size: 1em;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  background: #f7f7fa;
+  color: #22223b;
+  box-shadow: 0 1px 2px rgba(34, 34, 59, 0.07);
+  transition:
+    background 0.2s,
+    border 0.2s;
+  cursor: pointer;
+  margin-bottom: 0;
+  margin-top: 0;
+  display: inline-block;
+  line-height: 1.2;
+}
+.query-time-btn.active,
+.query-time-btn[aria-pressed='true'] {
+  background: #e0e7ff;
+  border-color: #0c1b50;
+  color: #0c1b50;
+}
+.query-time-btn:focus {
+  outline: 2px solid #0c1b50;
+  outline-offset: 1px;
+}
+
+/* Query Results Window - 042 Version */
+#queryResultsWindow {
+  background: #f7f7fa;
+  border: 1px solid #bbb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(34, 34, 59, 0.09);
+  word-break: break-word;
+  margin: 0;
+  padding: 1em 1em !important;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  box-sizing: inherit;
+}
+#queryResultsWindow code {
+  flex: 1;
+  min-width: 80px;
+  max-width: 100%;
+  white-space: pre-wrap;
+  background: #f7f7fa;
+  padding: 0.3em 0.5em;
+  border-radius: 4px;
+  overflow-x: auto;
+  border: 1px solid #bbb;
+  box-shadow: 0 1px 2px rgba(34, 34, 59, 0.07);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #f0f0f0;
+  font-family: 'Nunito Sans', Arial, sans-serif;
+}
+.map-container {
+  width: 100%;
+  height: 400px;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-top: 1.2em !important;
+}
+#map {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  margin: 0;
+  z-index: 1;
+  display: block;
+  background: #e0e0ff !important;
+  overflow: hidden !important;
+  position: relative;
+}
+.floating-box {
+  /* Restore original layout, padding, margin, etc. */
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(34, 34, 59, 0.07);
+  margin: 0 auto 16px auto;
+  padding: 1em 1em !important;
+  width: 70%;
+  max-width: 1100px;
+  min-width: 320px;
+  display: block;
+  overflow: visible !important;
+  word-break: break-word;
+}
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 8px;
+  overflow: hidden !important;
+  position: relative;
+}
+
+/* --- Leaflet popup headline truncation & content styling (consolidated) --- */
+.leaflet-popup-content {
+  width: 100% !important;
+  max-width: 220px !important;
+  min-width: 0 !important;
+  padding: 0.7em 0.9em 0.7em 0.9em;
+  margin: 0 !important;
+  box-sizing: border-box;
+  background: transparent !important;
+}
+.leaflet-popup-content ul,
+.leaflet-popup-content ol {
+  padding-left: 1.1em;
+  margin: 0.5em 0 0.5em 1.1em;
+}
+.leaflet-popup-content li {
+  list-style: disc inside;
+  margin-bottom: 0.3em;
+  padding: 0;
+}
+.leaflet-popup-content a.popup-headline-link {
+  display: block;
+  max-width: 90%;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2;
+  color: #0074d9;
+  text-decoration: underline;
+  margin: 0.1em 0;
+}
+@media (max-width: 600px) {
+  .leaflet-popup-content {
+    max-width: 85vw !important;
+  }
+  .leaflet-popup-content a.popup-headline-link {
+    max-width: 80vw !important;
+  }
+}
+
+/* --- Popup box: white, rounded corners, pixel-perfect header alignment --- */
+.leaflet-popup-content-wrapper {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(34, 34, 59, 0.13);
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 220px !important;
+  max-width: 220px !important;
+  min-width: 0 !important;
+  overflow: visible;
+  display: block;
+  border: 1px solid #e0e0e0;
+}
+
+@media (max-width: 600px) {
+  .leaflet-popup-content-wrapper {
+    max-width: 85vw !important;
+    width: 85vw !important;
+  }
+}
+
+/* --- Popup header: full width, blue, rounded top corners, perfectly aligned --- */
+.popup-header {
+  background: #0c1b50;
+  color: #fff;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 1.08em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  border-radius: 10px 10px 0 0;
+  padding: 0.7em 2.2em 0.7em 0.9em !important; /* right padding for close button */
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  display: block;
+}
+
+/* --- Popup close (x) button --- */
+.popup-close-x {
+  position: absolute;
+  top: 0.18em;
+  right: 0.7em;
+  width: 1.3em;
+  height: 1.3em;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.25em;
+  font-weight: bold;
+  line-height: 1.1;
+  cursor: pointer;
+  z-index: 10;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.92;
+  transition: opacity 0.15s;
+}
+.popup-close-x:hover {
+  opacity: 1;
+  background: none;
+}
+
+/* --- Popup content: match header padding, no margin, box-sizing border-box --- */
+.leaflet-popup-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  min-height: 100px !important;
+}
+.leaflet-popup-content > .popup-inner {
+  padding: 0.7em 0.9em 0.7em 0.9em !important;
+  box-sizing: border-box !important;
+  width: 100%;
+  white-space: normal; /* allow wrapping for content */
+  overflow: visible; /* allow content to show */
+  text-overflow: unset;
+}
+
+/* --- Truncation for header/content/links --- */
+.popup-header {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leaflet-popup-content .popup-inner,
+.leaflet-popup-content a.popup-headline-link {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.leaflet-popup-content a.popup-headline-link {
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .leaflet-popup-content {
+    max-width: 85vw !important;
+  }
+  .leaflet-popup-content a.popup-headline-link {
+    max-width: 65vw;
+  }
+}
+
+/* Ensure consistent spacing above map and headlines */
+.gdelt-result-row {
+  margin-top: 1.2em !important;
+}

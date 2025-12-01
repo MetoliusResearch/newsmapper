@@ -1,0 +1,23 @@
+{
+  "name": "newsmapper",
+  "version": "0.1.0",
+  "description": "A modern web app for mapping news events using GDELT data",
+  "private": true,
+  "scripts": {
+    "start": "npx serve . --listen 8080",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,css,html,md}\"",
+    "deploy": "gh-pages -d ."
+  },
+  "dependencies": {
+    "leaflet.heat": "^0.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.3"
+  }
+}

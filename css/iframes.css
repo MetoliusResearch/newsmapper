@@ -1,0 +1,36 @@
+/* Iframe and loader styles for NewsMapper */
+
+iframe,
+#gdeltMap {
+  margin-top: 2em;
+  display: block;
+  width: 100%;
+}
+
+.loader-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.loader-spinner {
+  border: 6px solid #eee;
+  border-top: 6px solid #888;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

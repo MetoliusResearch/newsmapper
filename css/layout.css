@@ -1,0 +1,332 @@
+/* Layout and structure styles for NewsMapper */
+html {
+  box-sizing: border-box;
+}
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background: #f0f0f0;
+  font-family: 'Nunito Sans', sans-serif;
+  overflow-x: hidden;
+}
+.top-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 128px;
+  background: #22223b;
+  color: #fff;
+  padding: 0 10%;
+}
+.top-bar-title {
+  font-size: 2em;
+  font-weight: 300;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 18px;
+  letter-spacing: 0.01em;
+}
+.header-right {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 18px;
+  height: auto;
+  position: static;
+}
+.section-wrapper {
+  padding-top: 1em !important;
+  padding-bottom: 1em !important;
+  margin: 0;
+  background: #f0f0f0;
+}
+.floating-box {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(34, 34, 59, 0.07);
+  margin: 0 auto 16px auto;
+  padding: 1em 1em !important;
+  width: 70%;
+  max-width: 1100px;
+  min-width: 320px;
+  display: block;
+  overflow: visible !important;
+  word-break: break-word;
+}
+.floating-box:last-child {
+  margin-bottom: 48px;
+}
+.section-header,
+.floating-box h2,
+#mapTitle,
+#headlinesTitle,
+#sentimentTitle {
+  font-size: 1.4em;
+  font-weight: 600;
+  color: #0c1b50;
+  margin-top: 0.7em;
+  margin-bottom: 0em;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+.gdelt-query-layout {
+  display: flex;
+  gap: 2em;
+  padding: 0.5em 0 !important;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.gdelt-query-left,
+.gdelt-query-right {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.gdelt-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+}
+.gdelt-controls-inline {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.gdelt-input-row {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-bottom: 0.7em;
+}
+.gdelt-input-row-inline {
+  display: flex;
+  align-items: flex-end;
+  gap: 1em;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+@media (max-width: 1200px), (max-width: 900px), (max-width: 600px) {
+  .gdelt-input-row-inline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7em;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .gdelt-query-layout {
+    flex-direction: column;
+    gap: 1.5em;
+    min-width: 0;
+  }
+  .floating-box {
+    width: 98%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+.gdelt-input-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+.gdelt-input-group label {
+  margin-bottom: 0.2em;
+  font-size: 1em;
+  font-weight: 600;
+  color: #0c1b50;
+}
+.or-separator {
+  color: #888;
+  font-size: 1em;
+  margin: 0 0.7em;
+  align-self: flex-end;
+  margin-bottom: 0.5em;
+}
+.gdelt-result-row {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.gdelt-result-row-with-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2em;
+  gap: 1em;
+}
+.gdelt-result-row-with-powered {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  justify-content: flex-start;
+  position: relative;
+}
+.gdelt-col-header {
+  font-size: 1em;
+  font-weight: 700;
+  color: #0c1b50;
+  letter-spacing: 0.01em;
+}
+.gdelt-linkbox {
+  flex: 1 1 auto;
+  max-width: 420px;
+  width: 100%;
+  font-size: 1em;
+  padding: 0.3em 0.7em;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  background: #f7f7fa;
+  color: #22223b;
+}
+.gdelt-copy-btn,
+.gdelt-open-btn,
+.gdelt-embed-btn {
+  flex: 0 0 auto;
+  background: #e9f2f7;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 0.3em 0.8em;
+  font-size: 1em;
+  cursor: pointer;
+  color: #22223b;
+  transition: background 0.15s;
+  position: relative;
+}
+.gdelt-copy-btn:hover,
+.gdelt-open-btn:hover,
+.gdelt-embed-btn:hover {
+  background: #d0e4ef;
+}
+.gdelt-copy-btn:hover::after,
+.gdelt-open-btn:hover::after,
+.gdelt-embed-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  top: -2.2em;
+  transform: translateX(-50%);
+  background: #22223b;
+  color: #fff;
+  padding: 0.25em 0.9em;
+  border-radius: 4px;
+  font-size: 0.97em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2000;
+}
+.reset-btn {
+  background: #e9f2f7;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 0.3em 0.8em;
+  font-size: 1em;
+  cursor: pointer;
+  color: #22223b;
+  margin-left: 0;
+  margin-bottom: 0;
+  transition: background 0.15s;
+  height: 2.1em;
+  align-self: flex-end;
+  min-width: 2.1em;
+}
+.reset-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  top: -2.2em;
+  transform: translateX(-50%);
+  background: #22223b;
+  color: #fff;
+  padding: 0.25em 0.9em;
+  border-radius: 4px;
+  font-size: 0.97em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2000;
+}
+.gdelt-powered {
+  margin-left: auto;
+  color: #888;
+  font-size: 0.97em;
+  text-align: right;
+  font-family: inherit;
+  white-space: nowrap;
+  align-self: center;
+}
+.gdelt-powered a {
+  color: #888;
+  text-decoration: underline;
+}
+.footer-bar {
+  background: #22223b;
+  height: 128px;
+  width: 100%;
+  min-height: 128px;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.footer-note {
+  position: absolute;
+  right: 10vw;
+  bottom: 0;
+  color: #fff;
+  font-size: 1em;
+  line-height: 128px;
+  text-align: right;
+  font-family: inherit;
+  opacity: 0.85;
+  font-weight: 700;
+}
+#gdeltQueryBox,
+.query-box,
+.gdelt-query-box,
+.gdelt-query-row,
+.gdelt-query-container,
+.gdelt-query-section,
+.gdelt-query-flex,
+.gdelt-query-wrap,
+.gdelt-query-main,
+.gdelt-query-parent {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+  max-height: none !important;
+  height: auto !important;
+}
+@media (max-width: 900px) {
+  .floating-box {
+    width: 95%;
+    padding: 1.2em 0.7em 1.2em 0.7em;
+  }
+  .gdelt-query-layout {
+    flex-direction: column;
+    gap: 1.5em;
+  }
+}
+@media (max-width: 600px) {
+  .gdelt-linkbox {
+    max-width: 100%;
+  }
+  .gdelt-input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3em;
+  }
+  .gdelt-result-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3em;
+  }
+  .reset-btn {
+    margin-left: 0;
+    margin-top: 0.7em;
+  }
+}
