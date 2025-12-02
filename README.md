@@ -1,6 +1,12 @@
 # NewsMapper
 
-A [modern web app for mapping news events](https://metoliusresearch.github.io/newsmapper/) using GDELT data.
+[https://metoliusresearch.github.io/newsmapper/](https://metoliusresearch.github.io/newsmapper/)
+
+The Extractive News Mapper is an interactive tool for exploring global news events related to extractive industries, land use conflict, and environmental issues.
+
+This effort is not affiliated with GDELT (gdeltproject.org), but does provide an interface to some of its data services using the GDELT database.
+
+The Extractive News Mapper was inspired in part by gdelt.github.io
 
 ## Features
 
