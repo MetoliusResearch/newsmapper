@@ -6,14 +6,14 @@
 export function setupSentimentAnalyzer() {
   /**
    * Classify average tone into a sentiment category
-   * Based on GDELT documentation: tone typically ranges from -20 to +20
-   * Articles in -1 to +1 are neutral/factual
+   * Based on GDELT tone data: typically ranges from -10 to +10
+   * Real-world data shows most articles are between -5 and +5
    */
   function classifyTone(avgTone) {
-    if (avgTone >= 5) return 'Highly Positive';
-    if (avgTone >= 2) return 'Moderately Positive';
-    if (avgTone >= -1) return 'Neutral';
-    if (avgTone >= -5) return 'Moderately Negative';
+    if (avgTone >= 2) return 'Highly Positive';
+    if (avgTone >= 0.5) return 'Moderately Positive';
+    if (avgTone >= -0.5) return 'Neutral/Mixed';
+    if (avgTone >= -2) return 'Moderately Negative';
     return 'Highly Negative';
   }
 
@@ -40,13 +40,13 @@ export function setupSentimentAnalyzer() {
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
 
     let direction;
-    if (Math.abs(slope) < 0.01) {
+    if (Math.abs(slope) < 0.005) {
       direction = 'stable';
-    } else if (slope > 0.05) {
+    } else if (slope > 0.02) {
       direction = 'increasingly positive';
     } else if (slope > 0) {
       direction = 'slightly improving';
-    } else if (slope < -0.05) {
+    } else if (slope < -0.02) {
       direction = 'increasingly negative';
     } else {
       direction = 'slightly declining';
@@ -223,22 +223,30 @@ export function setupSentimentAnalyzer() {
     }
 
     const { statistics, classification, trend, dataPoints } = analysis;
+    
+    // Determine if at recent lows/highs
+    const isNearMin = Math.abs(parseFloat(statistics.average) - parseFloat(statistics.minimum)) < 0.3;
+    const isNearMax = Math.abs(parseFloat(statistics.average) - parseFloat(statistics.maximum)) < 0.3;
+    const recentNote = isNearMin ? ' <span style="color: #c33; font-weight: bold;">(near period lows)</span>' : 
+                      isNearMax ? ' <span style="color: #3a3; font-weight: bold;">(near period highs)</span>' : '';
 
     return `
       <div class="sentiment-analysis-results">
         <h4 style="margin: 0 0 0.5em 0; color: #0c1b50;">Sentiment Analysis</h4>
         
         <div style="margin-bottom: 0.8em;">
-          <strong>Classification:</strong> ${classification.overall}
+          <strong>Classification:</strong> ${classification.overall}${recentNote}
           <br><small style="color: #666;">(Average tone: ${statistics.average})</small>
         </div>
         
         <div style="margin-bottom: 0.8em;">
           <strong>Overall Trend:</strong> Coverage is <em>${trend.overall}</em> over the time period
+          <br><small style="color: #666;">(Slope: ${trend.overallSlope})</small>
         </div>
         
         <div style="margin-bottom: 0.8em;">
           <strong>Recent Trend:</strong> Most recent sentiment is <em>${trend.recent}</em>
+          <br><small style="color: #666;">(Recent slope: ${trend.recentSlope})</small>
         </div>
         
         <div style="margin-bottom: 0.8em;">
