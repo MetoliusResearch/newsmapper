@@ -8,8 +8,16 @@ let leafletGeoJsonLayer = null;
 let leafletHeatLayer = null;
 let currentMapMode = 'points'; // default to 'points' (Newsmap), not 'heatmap'
 let leafletBaseLayer = null;
+let mapUpdateTimer = null;
 
 window.updateLeafletMapPoints = function (query, timespan) {
+  if (mapUpdateTimer) clearTimeout(mapUpdateTimer);
+  mapUpdateTimer = setTimeout(() => {
+    performMapUpdate(query, timespan);
+  }, 200);
+};
+
+function performMapUpdate(query, timespan) {
   if (!leafletMap) return;
   const loader = document.getElementById('gdeltMapLoader');
   if (loader) loader.style.display = 'flex';

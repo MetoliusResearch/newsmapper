@@ -97,9 +97,12 @@ export function setupGdeltQuery() {
       }
     }
     if (country) {
-      // Always wrap country names in quotes to avoid GDELT "phrase too short" errors
-      // and to handle special characters (commas, dashes, etc.)
-      const quotedCountry = country.startsWith('"') ? country : `"${country}"`;
+      // Only wrap country names in quotes if they contain spaces or special characters
+      // Single words like Mali should not be quoted to avoid "phrase too short" errors
+      let quotedCountry = country;
+      if (!country.startsWith('"') && (country.includes(' ') || country.includes('-') || country.includes(','))) {
+        quotedCountry = `"${country}"`;
+      }
       locationTerm = locationTerm ? `(${locationTerm} OR ${quotedCountry})` : quotedCountry;
     }
     let finalQuery = '';
