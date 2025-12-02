@@ -101,6 +101,8 @@ export function setupSentimentAnalyzer() {
 
   /**
    * Parse GDELT CSV timeline data and extract tone values
+   * CSV format: Date,Series,Value
+   * Example: 2024-12-03,Average Tone,-0.5114
    */
   function parseToneData(csvText) {
     if (!csvText || typeof csvText !== 'string') {
@@ -113,16 +115,17 @@ export function setupSentimentAnalyzer() {
     // Split into lines and skip header
     const lines = csvText.trim().split('\n');
     
-    // Skip header row
+    // Skip header row (Date,Series,Value)
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
 
-      // CSV format: date,tone,volume (or similar)
+      // CSV format: Date,Series,Value
+      // We want columns 0 (date) and 2 (value/tone)
       const parts = line.split(',');
-      if (parts.length >= 2) {
+      if (parts.length >= 3) {
         const date = parts[0].trim();
-        const tone = parseFloat(parts[1].trim());
+        const tone = parseFloat(parts[2].trim());
         
         if (date && !isNaN(tone)) {
           dates.push(date);
