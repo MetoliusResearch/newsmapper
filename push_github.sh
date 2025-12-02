@@ -32,6 +32,11 @@ echo ""
 echo "Pushing to GitHub..."
 git push origin main
 
+# Push to gh-pages
+echo ""
+echo "Deploying to GitHub Pages..."
+git push origin main:gh-pages --force
+
 echo ""
 echo "=== Done! ==="
 echo "GitHub Pages will deploy in 1-3 minutes"
