@@ -6,23 +6,24 @@
 export function setupSentimentAnalyzer() {
   /**
    * Classify average tone into a sentiment category
-   * Based on GDELT tone data: typically ranges from -10 to +10
-   * Real-world data shows most articles are between -5 and +5
+   * Based on GDELT tone data: values can range from -10 to +10
+   * In practice, -5 is incredibly negative, -2 is very negative
    */
   function classifyTone(avgTone) {
-    if (avgTone >= 2) return 'Highly Positive';
-    if (avgTone >= 0.5) return 'Moderately Positive';
-    if (avgTone >= -0.5) return 'Neutral/Mixed';
-    if (avgTone >= -2) return 'Moderately Negative';
-    return 'Highly Negative';
+    if (avgTone >= 3) return 'Highly Positive';
+    if (avgTone >= 1) return 'Moderately Positive';
+    if (avgTone >= -1) return 'Neutral/Mixed';
+    if (avgTone >= -3) return 'Moderately Negative';
+    if (avgTone >= -5) return 'Highly Negative';
+    return 'Extremely Negative';
   }
 
   /**
    * Calculate trend direction from tone values
-   * Uses linear regression to determine if sentiment is improving or declining
+   * Uses linear regression with statistical significance testing
    */
   function calculateTrend(toneValues) {
-    if (!toneValues || toneValues.length < 2) return { direction: 'insufficient data', slope: 0 };
+    if (!toneValues || toneValues.length < 2) return { direction: 'insufficient data', slope: 0, rSquared: 0 };
 
     const n = toneValues.length;
     let sumX = 0;
@@ -38,13 +39,31 @@ export function setupSentimentAnalyzer() {
     }
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-
+    const intercept = (sumY - slope * sumX) / n;
+    
+    // Calculate R-squared to measure trend strength
+    const meanY = sumY / n;
+    let ssTotal = 0;
+    let ssResidual = 0;
+    
+    for (let i = 0; i < n; i++) {
+      const predicted = slope * i + intercept;
+      ssTotal += Math.pow(toneValues[i] - meanY, 2);
+      ssResidual += Math.pow(toneValues[i] - predicted, 2);
+    }
+    
+    const rSquared = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;
+    
+    // Determine direction based on slope magnitude and R-squared
     let direction;
-    if (Math.abs(slope) < 0.005) {
-      direction = 'stable';
+    const absSlope = Math.abs(slope);
+    
+    // Only consider it a real trend if R-squared is reasonable
+    if (rSquared < 0.1 || absSlope < 0.005) {
+      direction = 'stable/no clear trend';
     } else if (slope > 0.02) {
       direction = 'increasingly positive';
-    } else if (slope > 0) {
+    } else if (slope > 0.005) {
       direction = 'slightly improving';
     } else if (slope < -0.02) {
       direction = 'increasingly negative';
@@ -52,7 +71,7 @@ export function setupSentimentAnalyzer() {
       direction = 'slightly declining';
     }
 
-    return { direction, slope };
+    return { direction, slope, rSquared, intercept };
   }
 
   /**
@@ -80,17 +99,18 @@ export function setupSentimentAnalyzer() {
 
   /**
    * Fetch sentiment data from GDELT API in CSV format
-   * Returns the tone timeline data for analysis
+   * Uses TimelineVol mode to get volume distribution across tone buckets
    */
   async function fetchSentimentData(query, timespan) {
     try {
-      // GDELT TimelineTone requires OR terms to be wrapped in parentheses
+      // GDELT requires OR terms to be wrapped in parentheses
       let formattedQuery = query;
       if (query.includes(' OR ') && !query.startsWith('(')) {
         formattedQuery = `(${query})`;
       }
       
-      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(formattedQuery)}&mode=TimelineTone&timespan=${timespan}&format=csv`;
+      // Use TimelineVol to get article distribution across tone ranges
+      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(formattedQuery)}&mode=TimelineVol&timespan=${timespan}&format=csv`;
       
       console.log('[Sentiment Analyzer] Fetching:', url);
 
@@ -111,9 +131,9 @@ export function setupSentimentAnalyzer() {
   }
 
   /**
-   * Parse GDELT CSV timeline data and extract tone values
-   * CSV format: Date,Series,Value
-   * Example: 2024-12-03,Average Tone,-0.5114
+   * Parse GDELT TimelineVol CSV data
+   * TimelineVol format: Date,Series,Volume where Series are tone buckets
+   * Example buckets: "Tone < -10", "Tone -10 to -5", "Tone -5 to 0", etc.
    */
   function parseToneData(csvText) {
     if (!csvText || typeof csvText !== 'string') {
@@ -122,25 +142,40 @@ export function setupSentimentAnalyzer() {
 
     const dates = [];
     const tones = [];
-
-    // Split into lines and skip header
-    const lines = csvText.trim().split('\n');
     
-    // Skip header row (Date,Series,Value)
+    // TimelineVol gives volume distribution, we need to reconstruct approximate tone values
+    // by creating synthetic data points weighted by volume in each bucket
+    
+    const lines = csvText.trim().split('\n');
+    const dateData = {}; // Group by date
+    
+    // Skip header, process data
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
 
-      // CSV format: Date,Series,Value
-      // We want columns 0 (date) and 2 (value/tone)
       const parts = line.split(',');
       if (parts.length >= 3) {
         const date = parts[0].trim();
-        const tone = parseFloat(parts[2].trim());
+        const series = parts[1].trim();
+        const volume = parseInt(parts[2].trim());
         
-        if (date && !isNaN(tone)) {
+        if (!date || isNaN(volume) || volume === 0) continue;
+        
+        // Extract tone range from series name
+        let toneValue = 0;
+        if (series.includes('< -10')) toneValue = -12;
+        else if (series.includes('-10 to -5')) toneValue = -7.5;
+        else if (series.includes('-5 to 0')) toneValue = -2.5;
+        else if (series.includes('0 to 5')) toneValue = 2.5;
+        else if (series.includes('5 to 10')) toneValue = 7.5;
+        else if (series.includes('> 10')) toneValue = 12;
+        else continue;
+        
+        // Create multiple data points based on volume (for statistical weight)
+        for (let j = 0; j < Math.min(volume, 10); j++) { // Cap at 10 to avoid too much data
           dates.push(date);
-          tones.push(tone);
+          tones.push(toneValue);
         }
       }
     }
@@ -177,15 +212,83 @@ export function setupSentimentAnalyzer() {
     const maxTone = Math.max(...tones);
     const volatility = calculateVolatility(tones);
     const trend = calculateTrend(tones);
+    
+    // Calculate percentage of negative periods
+    const negativeCount = tones.filter(t => t < 0).length;
+    const negativePercent = Math.round((negativeCount / tones.length) * 100);
 
     // Generate classifications
     const classification = classifyTone(avgTone);
     const volatilityClass = classifyVolatility(volatility);
 
-    // Calculate most recent trend (last 20% of data)
-    const recentCount = Math.max(2, Math.floor(tones.length * 0.2));
+    // Analyze recent period (last 20% of data) vs overall
+    const recentCount = Math.max(10, Math.floor(tones.length * 0.2));
     const recentTones = tones.slice(-recentCount);
+    const recentAvg = recentTones.reduce((sum, val) => sum + val, 0) / recentTones.length;
+    const recentMin = Math.min(...recentTones);
     const recentTrend = calculateTrend(recentTones);
+    
+    // Statistical comparison: is recent period significantly different?
+    const historicalTones = tones.slice(0, -recentCount);
+    const historicalAvg = historicalTones.reduce((sum, val) => sum + val, 0) / historicalTones.length;
+    const recentVsHistorical = recentAvg - historicalAvg;
+    
+    // Detect episodic negative spikes (values significantly worse than average)
+    const threshold = avgTone - volatility * 1.5;
+    const episodicSpikes = tones.filter(t => t < threshold && t < -2).length;
+    const hasEpisodicSpikes = episodicSpikes > tones.length * 0.1; // More than 10% are extreme
+    
+    // Determine baseline sentiment state
+    const isConsistentlyNegative = negativePercent > 75;
+    const isMostlyNegative = negativePercent > 60;
+    
+    // Analyze trend quality
+    const trendIsSignificant = trend.rSquared > 0.15;
+    const recentTrendIsSignificant = recentTrend.rSquared > 0.15;
+    const isDeclining = trend.slope < -0.005;
+    
+    // Generate intelligent description based on full statistical picture
+    let overallDescription = '';
+    
+    if (isConsistentlyNegative && hasEpisodicSpikes && isDeclining) {
+      overallDescription = 'consistently negative, episodically very negative, and generally declining';
+    } else if (isConsistentlyNegative && hasEpisodicSpikes) {
+      overallDescription = 'consistently negative with episodic very negative spikes';
+    } else if (isConsistentlyNegative && isDeclining) {
+      overallDescription = 'consistently negative and declining';
+    } else if (isMostlyNegative && hasEpisodicSpikes) {
+      overallDescription = 'predominantly negative with episodic spikes';
+    } else if (isConsistentlyNegative) {
+      overallDescription = 'consistently negative';
+    } else if (trendIsSignificant) {
+      overallDescription = trend.direction;
+    } else {
+      overallDescription = `${trend.direction} (weak trend)`;
+    }
+    
+    // Generate intelligent recent description
+    let recentDescription = '';
+    const isAtLows = Math.abs(recentMin - minTone) < volatility * 0.3;
+    
+    if (isAtLows && recentAvg < -2) {
+      recentDescription = 'at or near period lows - highly negative';
+    } else if (recentAvg < -2) {
+      recentDescription = 'highly negative';
+    } else if (recentAvg < -0.5) {
+      if (recentTrendIsSignificant && recentTrend.slope > 0.01) {
+        recentDescription = `recovering from negative levels (currently ${recentAvg.toFixed(2)})`;
+      } else if (recentTrend.slope < -0.01) {
+        recentDescription = `declining further into negative territory (${recentAvg.toFixed(2)})`;
+      } else {
+        recentDescription = 'persistently negative';
+      }
+    } else if (recentVsHistorical < -0.5) {
+      recentDescription = 'deteriorating compared to historical average';
+    } else if (recentVsHistorical > 0.5) {
+      recentDescription = 'improving compared to historical average';
+    } else {
+      recentDescription = recentTrend.direction;
+    }
 
     return {
       success: true,
@@ -196,6 +299,12 @@ export function setupSentimentAnalyzer() {
         minimum: minTone.toFixed(2),
         maximum: maxTone.toFixed(2),
         volatility: volatility.toFixed(2),
+        negativePercent: negativePercent,
+        recentAverage: recentAvg.toFixed(2),
+        recentMin: recentMin.toFixed(2),
+        historicalAvg: historicalAvg.toFixed(2),
+        recentVsHistorical: recentVsHistorical.toFixed(2),
+        episodicSpikes: episodicSpikes,
       },
       classification: {
         overall: classification,
@@ -204,8 +313,14 @@ export function setupSentimentAnalyzer() {
       trend: {
         overall: trend.direction,
         overallSlope: trend.slope.toFixed(4),
+        overallR2: trend.rSquared.toFixed(3),
         recent: recentTrend.direction,
         recentSlope: recentTrend.slope.toFixed(4),
+        recentR2: recentTrend.rSquared.toFixed(3),
+        overallDescription: overallDescription,
+        recentDescription: recentDescription,
+        trendIsSignificant: trendIsSignificant,
+        recentTrendIsSignificant: recentTrendIsSignificant,
       },
       rawData: {
         dates,
@@ -224,29 +339,43 @@ export function setupSentimentAnalyzer() {
 
     const { statistics, classification, trend, dataPoints } = analysis;
     
-    // Determine if at recent lows/highs
-    const isNearMin = Math.abs(parseFloat(statistics.average) - parseFloat(statistics.minimum)) < 0.3;
-    const isNearMax = Math.abs(parseFloat(statistics.average) - parseFloat(statistics.maximum)) < 0.3;
-    const recentNote = isNearMin ? ' <span style="color: #c33; font-weight: bold;">(near period lows)</span>' : 
-                      isNearMax ? ' <span style="color: #3a3; font-weight: bold;">(near period highs)</span>' : '';
+    // Negative percentage statement
+    const negativeStatement = statistics.negativePercent > 50 ? 
+      `<br><small style="color: #c33; font-weight: 500;">Generally negative: ${statistics.negativePercent}% of periods below zero</small>` : '';
+    
+    // Episodic spikes statement
+    const spikesStatement = statistics.episodicSpikes > 0 ?
+      `<br><small style="color: #d44; font-weight: 500;">${statistics.episodicSpikes} episodic very negative spikes detected</small>` : '';
+    
+    // Overall trend description
+    const overallTrendText = `Coverage is <em>${trend.overallDescription}</em>`;
+    
+    // Recent vs historical comparison
+    const recentVsHist = parseFloat(statistics.recentVsHistorical);
+    let comparisonText = '';
+    if (Math.abs(recentVsHist) > 0.3) {
+      const direction = recentVsHist > 0 ? 'above' : 'below';
+      const color = recentVsHist > 0 ? '#3a3' : '#c33';
+      comparisonText = `<br><small style="color: ${color};">Recent avg (${statistics.recentAverage}) is ${Math.abs(recentVsHist)} ${direction} historical avg (${statistics.historicalAvg})</small>`;
+    }
 
     return `
       <div class="sentiment-analysis-results">
         <h4 style="margin: 0 0 0.5em 0; color: #0c1b50;">Sentiment Analysis</h4>
         
         <div style="margin-bottom: 0.8em;">
-          <strong>Classification:</strong> ${classification.overall}${recentNote}
-          <br><small style="color: #666;">(Average tone: ${statistics.average})</small>
+          <strong>Classification:</strong> ${classification.overall}
+          <br><small style="color: #666;">(Overall average: ${statistics.average}, Recent: ${statistics.recentAverage})</small>${negativeStatement}${spikesStatement}
         </div>
         
         <div style="margin-bottom: 0.8em;">
-          <strong>Overall Trend:</strong> Coverage is <em>${trend.overall}</em> over the time period
-          <br><small style="color: #666;">(Slope: ${trend.overallSlope})</small>
+          <strong>Overall Pattern:</strong> ${overallTrendText}
+          <br><small style="color: #666;">(Slope: ${trend.overallSlope}, R²: ${trend.overallR2})</small>
         </div>
         
         <div style="margin-bottom: 0.8em;">
-          <strong>Recent Trend:</strong> Most recent sentiment is <em>${trend.recent}</em>
-          <br><small style="color: #666;">(Recent slope: ${trend.recentSlope})</small>
+          <strong>Recent Period:</strong> <em>${trend.recentDescription}</em>${comparisonText}
+          <br><small style="color: #666;">(Recent R²: ${trend.recentR2}, Min: ${statistics.recentMin})</small>
         </div>
         
         <div style="margin-bottom: 0.8em;">
@@ -256,7 +385,7 @@ export function setupSentimentAnalyzer() {
         
         <div style="padding-top: 0.5em; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #666;">
           Analysis based on ${dataPoints} data points
-          <br>Range: ${statistics.minimum} to ${statistics.maximum}
+          <br>Full range: ${statistics.minimum} to ${statistics.maximum}
         </div>
       </div>
     `;

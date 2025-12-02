@@ -2,7 +2,6 @@ import { setupDropdowns } from './js/dropdowns.js';
 import { setupGdeltQuery } from './js/gdeltQuery.js';
 import { setupPopups } from './js/popups.js';
 import { setupIframes } from './js/iframes.js';
-import { setupSentimentAnalyzer } from './js/sentimentAnalyzer.js';
 
 let leafletMap = null;
 let leafletGeoJsonLayer = null;
@@ -288,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupGdeltQuery();
   setupPopups();
   setupIframes();
-  setupSentimentAnalyzer();
 
   const querySection = document.getElementById('gdeltQuerySection');
   const queryTitle = document.getElementById('sectionTitleQuery');
