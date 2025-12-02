@@ -88,8 +88,12 @@
                     <div id="gdeltMapLoader" class="loader-overlay" style="display:none;">
                       <div class="loader-spinner"></div>
                     </div>
-                    <div id="gdeltMapPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
-                      Please enter a search term or select a resource, region, or country to view
+                    <div id="gdeltMapPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="10" r="3"/>
+                        <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"/>
+                      </svg>
+                      <div>Please enter a search term or select a resource, region, or country to view</div>
                     </div>
                     <div class="map-container"><div id="map"></div></div>
                 </div>
@@ -119,8 +123,12 @@
                     <div class="loader-spinner"></div>
                   </div>
                   <iframe id="gdeltHeadlines" width="100%" height="500" title="GDELT Headlines" allowfullscreen src="" tabindex="0"></iframe>
-                  <div id="gdeltHeadlinesPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
-                    Please enter a search term or select a resource, region, or country to view
+                  <div id="gdeltHeadlinesPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                    <div>Please enter a search term or select a resource, region, or country to view</div>
                   </div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
@@ -151,8 +159,12 @@
                   <div id="gdeltSentimentLoader" class="loader-overlay" style="display:none;">
                     <div class="loader-spinner"></div>
                   </div>
-                  <div id="gdeltSentimentPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;align-items:center;justify-content:center;text-align:center;padding:2em;">
-                    Please enter a search term or select a resource, region, or country to view
+                  <div id="gdeltSentimentPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 3v18h18"/>
+                      <path d="m19 9-5 5-4-4-3 3"/>
+                    </svg>
+                    <div>Please enter a search term or select a resource, region, or country to view</div>
                   </div>
                   <iframe id="gdeltSentiment" width="100%" height="400" title="GDELT Sentiment" allowfullscreen src="" tabindex="0"></iframe>
                 </div>
@@ -195,9 +207,13 @@
     <div id="headerInfoOverlay" class="header-info-overlay" style="display:none;"></div>
     <div id="headerInfoPopup" class="header-info-popup" style="display:none;">
       <button class="header-info-close-x" id="headerInfoClose" title="Close">&times;</button>
-      <div class="header-info-header">About ExtractiveNewsMapper - ENM</div>
+      <div class="header-info-header">About the Extractive News Mapper</div>
       <div class="header-info-body">
-        NewsMapper is an interactive tool for exploring global news events related to extractive industries, land use conflict, and environmental issues using the GDELT database. ENM was developed with private resources by Metolius Research.<br><br>
+        The Extractive News Mapper is an interactive tool for exploring global news events related to extractive
+         industries, land use conflict, and environmental issues.<br><br> This effort is not affiliated with GDELT <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">(gdeltproject.org)</a>,
+         but does provide an interface to some of its data services using the GDELT database.<br><br>
+         The Extractive News Mapper was inspired in part by <a href="https://github.com/gdelt/gdelt.github.io"target="_blank" rel="noopener">gdelt.github.io</a><br><br>
+        <b>How to use:</b>
         <ul>
           <li>Use the <b>Query</b> box to select a resource, region, or country, or enter your own custom search terms.</li>
           <li>The <b>News Map</b> visualizes the locations of recent news events matching your query.</li>

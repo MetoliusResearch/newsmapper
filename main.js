@@ -13,7 +13,7 @@ window.updateLeafletMapPoints = function (query, timespan) {
   if (!leafletMap) return;
   const loader = document.getElementById('gdeltMapLoader');
   if (loader) loader.style.display = 'flex';
-  const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
+  const url = window.lastMapGeoJsonUrl || `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
   console.log('[DEBUG] Fetching GeoJSON:', url);
   fetch(url)
     .then((r) => r.json())

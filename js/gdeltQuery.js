@@ -17,20 +17,37 @@ export function setupGdeltQuery() {
     let region = regionInput ? regionInput.value : '';
     let country = countryInput ? countryInput.value.trim() : '';
     let custom = customInput ? customInput.value.trim() : '';
+    
+    if (custom && custom.includes(',')) {
+      const parts = custom.split(',').map(p => p.trim());
+      if (parts.length === 2) {
+        custom = parts[0];
+        if (!country) country = parts[1];
+      }
+    }
+    
+    if (custom && !custom.startsWith('"') && !custom.includes('(') && !custom.includes(' AND ') && !custom.includes(' OR ')) {
+      if (custom.includes(' ')) {
+        custom = `"${custom}"`;
+      } else if (custom.length <= 3) {
+        custom = `"${custom}"`;
+      }
+    }
+    
     const resourceMap = {
-      'Fossil Fuels': '(oil OR gas OR petroleum OR lng OR coal)',
-      'Oil & Gas': 'petroleum AND lng',
+      'Fossil Fuels': '("oil" OR "gas" OR petroleum OR "lng" OR coal)',
+      'Oil & Gas': '(petroleum OR "lng")',
       Petroleum: 'petroleum',
-      LNG: 'lng',
+      LNG: '"lng"',
       Coal: 'coal',
       Mining: 'mining',
       'Any Mining': 'mining',
       ETMs: '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
       'Aluminum/Bauxite': '(aluminum OR bauxite)',
-      Agroindustry: '(palm oil OR soy OR cattle OR beef)',
+      Agroindustry: '("palm oil" OR "soy" OR cattle OR beef)',
       'Cattle/Beef': '(cattle OR beef)',
-      Logging: '(logging OR timber AND forest)',
-      'Any Logging': '(logging OR timber AND forest)',
+      Logging: '((logging OR timber) AND forest)',
+      'Any Logging': '((logging OR timber) AND forest)',
       Timber: 'timber',
       Biofuels: 'biofuels'
     };
@@ -38,8 +55,7 @@ export function setupGdeltQuery() {
     let locationTerm = '';
     if (region && region !== 'Global') {
       if (region === 'Amazon') {
-        locationTerm =
-          'Amazon AND (Brazil OR Peru OR Colombia OR Bolivia OR Venezuela OR Ecuador OR Guyana OR Suriname OR "French Guiana")';
+        locationTerm = '(Brazil OR Peru OR Colombia OR Bolivia OR Venezuela OR Ecuador OR Guyana OR Suriname OR "French Guiana")';
       } else {
         locationTerm = region;
       }
@@ -49,7 +65,10 @@ export function setupGdeltQuery() {
     }
     let finalQuery = '';
     if (custom) {
-      finalQuery = custom.includes(' OR ') ? `(${custom})` : custom;
+      const parts = [];
+      if (locationTerm) parts.push(locationTerm);
+      parts.push(custom);
+      finalQuery = parts.join(' AND ');
     } else {
       const parts = [];
       if (locationTerm) parts.push(locationTerm);
@@ -61,6 +80,9 @@ export function setupGdeltQuery() {
   }
   function getMapUrl(query, timespan) {
     return `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}`;
+  }
+  function getMapGeoJsonUrl(query, timespan) {
+    return `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
   }
   function getHeadlinesUrl(query, timespan) {
     // Include Google Translate by default
@@ -95,7 +117,7 @@ export function setupGdeltQuery() {
     }
     const sentimentTitle = document.getElementById('sentimentTitle');
     if (sentimentTitle) {
-      sentimentTitle.textContent = `Sentiment: ${readable} (${sentimentTimespan})`;
+      sentimentTitle.textContent = `Sentiment: ${readable} ${getSentimentTimespanLabel(sentimentTimespan)}`;
     }
   }
   function getTimespanLabel(timespan) {
@@ -114,6 +136,18 @@ export function setupGdeltQuery() {
         return timespan ? `(${timespan})` : '';
     }
   }
+  function getSentimentTimespanLabel(timespan) {
+    switch (timespan) {
+      case '1y':
+        return '- past year';
+      case '2y':
+        return '- past 2 years';
+      case '5y':
+        return '- past 5 years';
+      default:
+        return timespan ? `- ${timespan}` : '';
+    }
+  }
   window.setMapTime = function (timespan) {
     window._gdeltTimespanMap = timespan;
     const query = buildQuery();
@@ -124,7 +158,9 @@ export function setupGdeltQuery() {
       window._gdeltTimespanSentiment || '1y'
     );
     const mapUrl = getMapUrl(query, timespan);
+    const mapGeoJsonUrl = getMapGeoJsonUrl(query, timespan);
     window.lastMapUrl = mapUrl;
+    window.lastMapGeoJsonUrl = mapGeoJsonUrl;
     if (window.setIframeWithLoader) {
       window.setIframeWithLoader('gdeltMap', 'gdeltMapLoader', mapUrl);
     }
@@ -178,7 +214,6 @@ export function setupGdeltQuery() {
       if (regionInput.value && regionInput.value !== 'Global') {
         if (countryInput) countryInput.value = '';
       }
-      clearCustomIfNeeded();
       updateGdeltIframes();
     });
   if (countryInput) {
@@ -186,14 +221,12 @@ export function setupGdeltQuery() {
       if (countryInput.value && countryInput.value.trim() !== '') {
         if (regionInput) regionInput.value = 'Global';
       }
-      clearCustomIfNeeded();
       updateGdeltIframes();
     });
     countryInput.addEventListener('change', function () {
       if (countryInput.value && countryInput.value.trim() !== '') {
         if (regionInput) regionInput.value = 'Global';
       }
-      clearCustomIfNeeded();
       updateGdeltIframes();
     });
   }
@@ -201,8 +234,6 @@ export function setupGdeltQuery() {
     customInput.addEventListener('input', function () {
       if (customInput.value.trim() !== '') {
         if (resourceInput) resourceInput.value = '';
-        if (regionInput) regionInput.value = '';
-        if (countryInput) countryInput.value = '';
       }
       updateGdeltIframes();
     });
@@ -286,9 +317,11 @@ export function setupGdeltQuery() {
     const headlinesTimespan = window._gdeltTimespanHeadlines || '1d';
     const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
     const mapUrl = getMapUrl(query, mapTimespan);
+    const mapGeoJsonUrl = getMapGeoJsonUrl(query, mapTimespan);
     const headlinesUrl = getHeadlinesUrl(query, headlinesTimespan);
     const sentimentUrl = getSentimentUrl(query, sentimentTimespan);
     window.lastMapUrl = mapUrl;
+    window.lastMapGeoJsonUrl = mapGeoJsonUrl;
     window.lastHeadlinesUrl = headlinesUrl;
     window.lastSentimentUrl = sentimentUrl;
     updateSectionTitles(query, mapTimespan, headlinesTimespan, sentimentTimespan);
