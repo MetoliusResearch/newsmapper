@@ -79,20 +79,20 @@ export function setupSentimentAnalyzer() {
   }
 
   /**
-   * Fetch sentiment data from GDELT API in JSON format
+   * Fetch sentiment data from GDELT API in CSV format
    * Returns the tone timeline data for analysis
    */
   async function fetchSentimentData(query, timespan) {
     try {
-      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&timespan=${timespan}&format=json`;
+      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&timespan=${timespan}&format=csv`;
 
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      const csvText = await response.text();
+      return csvText;
     } catch (error) {
       console.error('Error fetching sentiment data:', error);
       return null;
@@ -100,20 +100,34 @@ export function setupSentimentAnalyzer() {
   }
 
   /**
-   * Parse GDELT timeline data and extract tone values
+   * Parse GDELT CSV timeline data and extract tone values
    */
-  function parseToneData(data) {
-    if (!data || !data.timeline || !Array.isArray(data.timeline)) {
+  function parseToneData(csvText) {
+    if (!csvText || typeof csvText !== 'string') {
       return { dates: [], tones: [] };
     }
 
     const dates = [];
     const tones = [];
 
-    for (const point of data.timeline) {
-      if (point.date && typeof point.tone === 'number') {
-        dates.push(point.date);
-        tones.push(point.tone);
+    // Split into lines and skip header
+    const lines = csvText.trim().split('\n');
+    
+    // Skip header row
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // CSV format: date,tone,volume (or similar)
+      const parts = line.split(',');
+      if (parts.length >= 2) {
+        const date = parts[0].trim();
+        const tone = parseFloat(parts[1].trim());
+        
+        if (date && !isNaN(tone)) {
+          dates.push(date);
+          tones.push(tone);
+        }
       }
     }
 
