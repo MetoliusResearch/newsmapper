@@ -31,6 +31,7 @@ window.updateLeafletMapPoints = function (query, timespan) {
           if (!coords || coords.length < 2) return null;
           const lat = coords[1],
             lng = coords[0];
+          if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) return null;
           const intensity = (f.properties && (f.properties.intensity || f.properties.count)) || 1;
           return [lat, lng, intensity];
         })
@@ -53,6 +54,13 @@ window.updateLeafletMapPoints = function (query, timespan) {
         return RADIUS_ONE;
       }
       leafletGeoJsonLayer = L.geoJSON(geojson, {
+        filter: (feature) => {
+          const coords = feature.geometry && feature.geometry.coordinates;
+          if (!coords || coords.length < 2) return false;
+          // Filter out artifacts at 0,0
+          if (Math.abs(coords[1]) < 0.0001 && Math.abs(coords[0]) < 0.0001) return false;
+          return true;
+        },
         pointToLayer: (feature, latlng) => {
           const count =
             feature.properties && typeof feature.properties.count === 'number'

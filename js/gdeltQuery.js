@@ -13,7 +13,7 @@ export function setupGdeltQuery() {
   };
 
   function buildQuery() {
-    let resource = resourceInput ? resourceInput.value : '';
+    let resource = resourceInput ? resourceInput.value.trim() : '';
     let region = regionInput ? regionInput.value : '';
     let country = countryInput ? countryInput.value.trim() : '';
     let custom = customInput ? customInput.value.trim() : '';
@@ -76,7 +76,18 @@ export function setupGdeltQuery() {
       Timber: 'timber',
       Biofuels: 'biofuels'
     };
-    let queryTerm = resourceMap[resource] || resource;
+    
+    // Case-insensitive resource lookup
+    let queryTerm = resource;
+    if (resource) {
+      const resourceKey = Object.keys(resourceMap).find(
+        key => key.toLowerCase() === resource.toLowerCase()
+      );
+      if (resourceKey) {
+        queryTerm = resourceMap[resourceKey];
+      }
+    }
+    
     let locationTerm = '';
     if (region && region !== 'Global') {
       if (region === 'Amazon') {
@@ -103,6 +114,7 @@ export function setupGdeltQuery() {
       if (queryTerm) parts.push(queryTerm);
       finalQuery = parts.join(' AND ');
     }
+    console.log('[buildQuery] Resource:', resource, 'Country:', country, 'Final:', finalQuery);
     if (queryBox) queryBox.value = finalQuery;
     return finalQuery;
   }
