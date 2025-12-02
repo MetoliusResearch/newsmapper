@@ -35,11 +35,11 @@ export function setupGdeltQuery() {
     }
     
     const resourceMap = {
-      'Fossil Fuels': '("oil" OR "gas" OR petroleum OR "lng" OR coal)',
-      'Oil & Gas': '(petroleum OR "lng")',
-      Petroleum: 'petroleum',
-      LNG: '"lng"',
-      Coal: 'coal',
+      'Fossil Fuels': '("oil" OR "gas" OR "petroleum" OR "lng" OR "coal")',
+      Oil: '("crude oil" OR "petroleum" OR "oil production" OR "oil spill" OR "oil pipeline")',
+      Petroleum: '"petroleum"',
+      LNG: '("natural gas" OR "fracking" OR "hydraulic fracturing" OR "liquefied natural gas")',
+      Coal: '"coal"',
       Mining: 'mining',
       'Any Mining': 'mining',
       ETMs: '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
@@ -61,7 +61,10 @@ export function setupGdeltQuery() {
       }
     }
     if (country) {
-      locationTerm = locationTerm ? `(${locationTerm} OR ${country})` : country;
+      // Always wrap country names in quotes to avoid GDELT "phrase too short" errors
+      // and to handle special characters (commas, dashes, etc.)
+      const quotedCountry = country.startsWith('"') ? country : `"${country}"`;
+      locationTerm = locationTerm ? `(${locationTerm} OR ${quotedCountry})` : quotedCountry;
     }
     let finalQuery = '';
     if (custom) {

@@ -52,7 +52,7 @@ export function setupDropdowns() {
   }
   const resourceOptions = [
     'Fossil Fuels',
-    'Oil & Gas',
+    'Oil',
     'LNG',
     'Coal',
     'Mining',
