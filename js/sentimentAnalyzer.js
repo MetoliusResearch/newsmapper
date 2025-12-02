@@ -84,7 +84,13 @@ export function setupSentimentAnalyzer() {
    */
   async function fetchSentimentData(query, timespan) {
     try {
-      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&timespan=${timespan}&format=csv`;
+      // GDELT TimelineTone requires OR terms to be wrapped in parentheses
+      let formattedQuery = query;
+      if (query.includes(' OR ') && !query.startsWith('(')) {
+        formattedQuery = `(${query})`;
+      }
+      
+      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(formattedQuery)}&mode=TimelineTone&timespan=${timespan}&format=csv`;
       
       console.log('[Sentiment Analyzer] Fetching:', url);
 
