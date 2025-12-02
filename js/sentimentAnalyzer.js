@@ -85,16 +85,21 @@ export function setupSentimentAnalyzer() {
   async function fetchSentimentData(query, timespan) {
     try {
       const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&timespan=${timespan}&format=csv`;
+      
+      console.log('[Sentiment Analyzer] Fetching:', url);
 
       const response = await fetch(url);
       if (!response.ok) {
+        console.error('[Sentiment Analyzer] HTTP error:', response.status, response.statusText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const csvText = await response.text();
+      console.log('[Sentiment Analyzer] Received', csvText.length, 'characters');
+      console.log('[Sentiment Analyzer] First 200 chars:', csvText.substring(0, 200));
       return csvText;
     } catch (error) {
-      console.error('Error fetching sentiment data:', error);
+      console.error('[Sentiment Analyzer] Error fetching sentiment data:', error);
       return null;
     }
   }
@@ -150,11 +155,13 @@ export function setupSentimentAnalyzer() {
     }
 
     const { dates, tones } = parseToneData(data);
+    
+    console.log('[Sentiment Analyzer] Parsed', tones.length, 'data points');
 
     if (tones.length === 0) {
       return {
         success: false,
-        error: 'No sentiment data available for this query',
+        error: 'No sentiment data available for this query. This may mean there are very few or no articles matching your search criteria in the selected timespan.',
       };
     }
 
