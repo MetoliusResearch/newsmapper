@@ -131,12 +131,52 @@ export function setupIframes() {
     }
     document.body.appendChild(popup);
   };
+  
+  window.downloadGeoJSON = function() {
+    const url = window.lastMapGeoJsonUrl;
+    if (!url) {
+        alert('No map data available to download.');
+        return;
+    }
+    
+    const button = document.activeElement;
+    const originalText = button ? button.innerHTML : '';
+    if (button) button.innerHTML = '⏳';
+
+    fetch(url)
+        .then(resp => resp.blob())
+        .then(blob => {
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = 'gdelt_extractives_map.geojson';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(blobUrl);
+            if (button) button.innerHTML = originalText;
+        })
+        .catch(err => {
+            console.error('Download failed', err);
+            alert('Download failed. Opening raw data in new tab instead.');
+            window.open(url, '_blank');
+            if (button) button.innerHTML = originalText;
+        });
+  };
+
   window.copyAndConfirmLink = function (iframeId) {
     if (iframeId === 'gdeltMap') {
-      var link = document.getElementById('gdeltMapQueryLink');
-      if (link && link.href) {
-        window.open(link.href, '_blank', 'noopener');
+      if (window.lastMapUrl) {
+        window.open(window.lastMapUrl, '_blank', 'noopener');
         return;
+      }
+      // Fallback if lastMapUrl not set yet
+      const queryBox = document.getElementById('gdeltMapQuery');
+      if (queryBox && queryBox.value) {
+         const timespan = window._gdeltTimespanMap || '1d';
+         const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(queryBox.value)}&mode=PointData&timespan=${timespan}`;
+         window.open(url, '_blank', 'noopener');
+         return;
       }
     }
     const iframe = document.getElementById(iframeId);

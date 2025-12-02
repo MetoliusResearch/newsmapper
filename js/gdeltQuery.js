@@ -1,3 +1,109 @@
+const resourceMap = {
+  'Fossil Fuels': '("fossil fuels" OR "crude oil" OR oil OR gas OR coal OR "natural gas")',
+  Oil: '("crude oil" OR petroleum OR "oil production" OR "oil spill" OR "oil pipeline")',
+  Petroleum: 'petroleum',
+  LNG: '("natural gas" OR fracking OR "hydraulic fracturing" OR "liquefied natural gas")',
+  Coal: 'coal',
+  Mining: 'mining',
+  'Any Mining': 'mining',
+  Gold: 'gold AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore) AND NOT medal',
+  Silver: 'silver AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore) AND NOT medal',
+  Iron: 'iron AND ("iron ore" OR ore OR mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster)',
+  Copper: 'copper AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Nickel: 'nickel AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Cobalt: 'cobalt AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Zinc: 'zinc AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Lead: 'lead AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Platinum: 'platinum AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Palladium: 'palladium AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Lithium: 'lithium AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Graphite: 'graphite AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Tin: 'tin AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Tantalum: 'tantalum',
+  Tantalium: 'tantalum',
+  Tungsten: 'tungsten',
+  Manganese: 'manganese',
+  Chromium: 'chromium AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Molybdenum: 'molybdenum',
+  Vanadium: 'vanadium',
+  Niobium: 'niobium',
+  Uranium: 'uranium',
+  Antimony: 'antimony',
+  ETMs: '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
+  'Aluminum/Bauxite': '(aluminum OR bauxite) AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Agroindustry: '("palm oil" OR soy OR cattle OR beef)',
+  'Palm Oil': '("palm oil" OR "oil palm" OR "palm plantation")',
+  Soy: '(soy OR soybean OR "soy production")',
+  'Cattle/Beef': '(cattle OR beef)',
+  Logging: '((logging OR timber) AND forest)',
+  'Any Logging': '((logging OR timber) AND forest)',
+  Timber: 'timber AND (logging OR forest OR harvest OR concession OR permit OR illegal)',
+  Biofuels: 'biofuels'
+};
+
+export function generateGdeltQuery(resource, region, country, custom) {
+  resource = resource ? resource.trim() : '';
+  region = region ? region : '';
+  country = country ? country.trim() : '';
+  custom = custom ? custom.trim() : '';
+
+  if (custom && custom.includes(',')) {
+    const parts = custom.split(',').map(p => p.trim());
+    if (parts.length === 2) {
+      custom = parts[0];
+      if (!country) country = parts[1];
+    }
+  }
+  
+  if (custom && !custom.startsWith('"') && !custom.includes('(') && !custom.includes(' AND ') && !custom.includes(' OR ')) {
+    if (custom.includes(' ')) {
+      custom = `"${custom}"`;
+    }
+  }
+
+  // Case-insensitive resource lookup
+  let queryTerm = resource;
+  if (resource) {
+    const resourceKey = Object.keys(resourceMap).find(
+      key => key.toLowerCase() === resource.toLowerCase()
+    );
+    if (resourceKey) {
+      queryTerm = resourceMap[resourceKey];
+    }
+  }
+  
+  let locationTerm = '';
+  if (region && region !== 'Global') {
+    if (region === 'Amazon') {
+      locationTerm = '(Brazil OR Peru OR Colombia OR Bolivia OR Venezuela OR Ecuador OR Guyana OR Suriname OR "French Guiana")';
+    } else {
+      locationTerm = region;
+    }
+  }
+  if (country) {
+    // Only wrap country names in quotes if they contain spaces or special characters
+    // Single words like Mali should not be quoted to avoid "phrase too short" errors
+    let quotedCountry = country;
+    if (!country.startsWith('"') && (country.includes(' ') || country.includes('-') || country.includes(','))) {
+      quotedCountry = `"${country}"`;
+    }
+    locationTerm = locationTerm ? `(${locationTerm} OR ${quotedCountry})` : quotedCountry;
+  }
+  let finalQuery = '';
+  if (custom) {
+    const parts = [];
+    if (locationTerm) parts.push(locationTerm);
+    parts.push(custom);
+    finalQuery = parts.join(' AND ');
+  } else {
+    const parts = [];
+    if (locationTerm) parts.push(locationTerm);
+    if (queryTerm) parts.push(queryTerm);
+    finalQuery = parts.join(' AND ');
+  }
+  return finalQuery;
+}
+
 export function setupGdeltQuery() {
   const resourceInput = document.getElementById('resourceInput');
   const regionInput = document.getElementById('regionInput');
@@ -18,105 +124,8 @@ export function setupGdeltQuery() {
     let country = countryInput ? countryInput.value.trim() : '';
     let custom = customInput ? customInput.value.trim() : '';
     
-    if (custom && custom.includes(',')) {
-      const parts = custom.split(',').map(p => p.trim());
-      if (parts.length === 2) {
-        custom = parts[0];
-        if (!country) country = parts[1];
-      }
-    }
+    const finalQuery = generateGdeltQuery(resource, region, country, custom);
     
-    if (custom && !custom.startsWith('"') && !custom.includes('(') && !custom.includes(' AND ') && !custom.includes(' OR ')) {
-      if (custom.includes(' ')) {
-        custom = `"${custom}"`;
-      } else if (custom.length <= 3) {
-        custom = `"${custom}"`;
-      }
-    }
-    
-    const resourceMap = {
-      'Fossil Fuels': '("oil" OR "gas" OR "petroleum" OR "lng" OR "coal")',
-      Oil: '("crude oil" OR "petroleum" OR "oil production" OR "oil spill" OR "oil pipeline")',
-      Petroleum: '"petroleum"',
-      LNG: '("natural gas" OR "fracking" OR "hydraulic fracturing" OR "liquefied natural gas")',
-      Coal: '"coal"',
-      Mining: 'mining',
-      'Any Mining': 'mining',
-      Gold: '("gold mining" OR "gold mine" OR "gold production")',
-      Silver: '("silver mining" OR "silver mine" OR "silver production")',
-      Iron: '("iron ore" OR "iron mining" OR "iron mine")',
-      Copper: '("copper mining" OR "copper mine" OR "copper production")',
-      Nickel: '("nickel mining" OR "nickel mine" OR "nickel production")',
-      Cobalt: '("cobalt mining" OR "cobalt mine" OR "cobalt production")',
-      Zinc: '("zinc mining" OR "zinc mine" OR "zinc production")',
-      Lead: '("lead mining" OR "lead mine" OR "lead production")',
-      Platinum: '("platinum mining" OR "platinum mine" OR "platinum production")',
-      Palladium: '("palladium mining" OR "palladium mine" OR "palladium production")',
-      Lithium: '("lithium mining" OR "lithium mine" OR "lithium production")',
-      Graphite: '("graphite mining" OR "graphite mine" OR "graphite production")',
-      Tin: '("tin mining" OR "tin mine" OR "tin production")',
-      Tantalum: '("tantalum mining" OR "tantalum mine" OR "tantalum production")',
-      Tantalium: '("tantalum mining" OR "tantalum mine" OR "tantalum production")',
-      Tungsten: '("tungsten mining" OR "tungsten mine" OR "tungsten production")',
-      Manganese: '("manganese mining" OR "manganese mine" OR "manganese production")',
-      Chromium: '("chromium mining" OR "chromium mine" OR "chromium production")',
-      Molybdenum: '("molybdenum mining" OR "molybdenum mine" OR "molybdenum production")',
-      Vanadium: '("vanadium mining" OR "vanadium mine" OR "vanadium production")',
-      Niobium: '("niobium mining" OR "niobium mine" OR "niobium production")',
-      Uranium: '("uranium mining" OR "uranium mine" OR "uranium production")',
-      Antimony: '("antimony mining" OR "antimony mine" OR "antimony production")',
-      ETMs: '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
-      'Aluminum/Bauxite': '(aluminum OR bauxite)',
-      Agroindustry: '("palm oil" OR "soy" OR cattle OR beef)',
-      'Palm Oil': '("palm oil" OR "oil palm" OR "palm plantation")',
-      Soy: '("soy" OR "soybean" OR "soy production")',
-      'Cattle/Beef': '(cattle OR beef)',
-      Logging: '((logging OR timber) AND forest)',
-      'Any Logging': '((logging OR timber) AND forest)',
-      Timber: 'timber',
-      Biofuels: 'biofuels'
-    };
-    
-    // Case-insensitive resource lookup
-    let queryTerm = resource;
-    if (resource) {
-      const resourceKey = Object.keys(resourceMap).find(
-        key => key.toLowerCase() === resource.toLowerCase()
-      );
-      if (resourceKey) {
-        queryTerm = resourceMap[resourceKey];
-      }
-    }
-    
-    let locationTerm = '';
-    if (region && region !== 'Global') {
-      if (region === 'Amazon') {
-        locationTerm = '(Brazil OR Peru OR Colombia OR Bolivia OR Venezuela OR Ecuador OR Guyana OR Suriname OR "French Guiana")';
-      } else {
-        locationTerm = region;
-      }
-    }
-    if (country) {
-      // Only wrap country names in quotes if they contain spaces or special characters
-      // Single words like Mali should not be quoted to avoid "phrase too short" errors
-      let quotedCountry = country;
-      if (!country.startsWith('"') && (country.includes(' ') || country.includes('-') || country.includes(','))) {
-        quotedCountry = `"${country}"`;
-      }
-      locationTerm = locationTerm ? `(${locationTerm} OR ${quotedCountry})` : quotedCountry;
-    }
-    let finalQuery = '';
-    if (custom) {
-      const parts = [];
-      if (locationTerm) parts.push(locationTerm);
-      parts.push(custom);
-      finalQuery = parts.join(' AND ');
-    } else {
-      const parts = [];
-      if (locationTerm) parts.push(locationTerm);
-      if (queryTerm) parts.push(queryTerm);
-      finalQuery = parts.join(' AND ');
-    }
     console.log('[buildQuery] Resource:', resource, 'Country:', country, 'Final:', finalQuery);
     if (queryBox) queryBox.value = finalQuery;
     return finalQuery;
@@ -280,6 +289,52 @@ export function setupGdeltQuery() {
       }
       updateGdeltIframes();
     });
+
+  // Query Time Buttons Logic
+  const queryTime1d = document.getElementById('queryTime1d');
+  const queryTime7d = document.getElementById('queryTime7d');
+  const queryTime30d = document.getElementById('queryTime30d');
+  
+  function setQueryTime(timespan) {
+    // Headlines always uses the selected timespan
+    window._gdeltTimespanHeadlines = timespan;
+    
+    // Map logic: if 30d is selected, cap it at 7d and show warning
+    const mapWarning = document.getElementById('mapTimeWarning');
+    if (timespan === '30d') {
+      window._gdeltTimespanMap = '7d';
+      if (mapWarning) mapWarning.style.display = 'block';
+    } else {
+      window._gdeltTimespanMap = timespan;
+      if (mapWarning) mapWarning.style.display = 'none';
+    }
+    
+    // Update button states
+    [queryTime1d, queryTime7d, queryTime30d].forEach(btn => {
+      if (btn) {
+        const isActive = btn.id === `queryTime${timespan}`;
+        btn.setAttribute('aria-pressed', isActive);
+        if (isActive) btn.classList.add('active');
+        else btn.classList.remove('active');
+      }
+    });
+    
+    updateGdeltIframes();
+    if (window.updateAllFromInputs) {
+      window.updateAllFromInputs();
+    }
+  }
+
+  if (queryTime1d) {
+    queryTime1d.addEventListener('click', () => setQueryTime('1d'));
+  }
+  if (queryTime7d) {
+    queryTime7d.addEventListener('click', () => setQueryTime('7d'));
+  }
+  if (queryTime30d) {
+    queryTime30d.addEventListener('click', () => setQueryTime('30d'));
+  }
+
   const resetBtn = document.getElementById('resetCountry');
   if (resetBtn) {
     resetBtn.addEventListener('click', function () {
@@ -368,6 +423,16 @@ export function setupGdeltQuery() {
     window.lastHeadlinesUrl = headlinesUrl;
     window.lastSentimentUrl = sentimentUrl;
     updateSectionTitles(query, mapTimespan, headlinesTimespan, sentimentTimespan);
+    
+    // Ensure map warning is correct even if update triggered by other means
+    const mapWarning = document.getElementById('mapTimeWarning');
+    if (mapWarning) {
+        if (headlinesTimespan === '30d') {
+            mapWarning.style.display = 'block';
+        } else {
+            mapWarning.style.display = 'none';
+        }
+    }
     
     const mapPlaceholder = document.getElementById('gdeltMapPlaceholder');
     const headlinesPlaceholder = document.getElementById('gdeltHeadlinesPlaceholder');

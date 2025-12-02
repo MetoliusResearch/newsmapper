@@ -1,5 +1,5 @@
 import { setupDropdowns } from './js/dropdowns.js';
-import { setupGdeltQuery } from './js/gdeltQuery.js';
+import { setupGdeltQuery, generateGdeltQuery } from './js/gdeltQuery.js';
 import { setupPopups } from './js/popups.js';
 import { setupIframes } from './js/iframes.js';
 
@@ -20,13 +20,31 @@ window.updateLeafletMapPoints = function (query, timespan) {
 function performMapUpdate(query, timespan) {
   if (!leafletMap) return;
   const loader = document.getElementById('gdeltMapLoader');
+  const noResults = document.getElementById('gdeltMapNoResults');
   if (loader) loader.style.display = 'flex';
-  const url = window.lastMapGeoJsonUrl || `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
+  if (noResults) noResults.style.display = 'none';
+  
+  // Ensure globals are set for download/link buttons
+  const geoJsonUrl = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
+  const mapUrl = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}`;
+  
+  window.lastMapGeoJsonUrl = geoJsonUrl;
+  window.lastMapUrl = mapUrl;
+
+  const url = geoJsonUrl;
   console.log('[DEBUG] Fetching GeoJSON:', url);
   fetch(url)
     .then((r) => r.json())
     .then((geojson) => {
       console.log('[DEBUG] GeoJSON features:', geojson.features ? geojson.features.length : 'none');
+      
+      const noResults = document.getElementById('gdeltMapNoResults');
+      if (!geojson.features || geojson.features.length === 0) {
+        if (noResults) noResults.style.display = 'flex';
+      } else {
+        if (noResults) noResults.style.display = 'none';
+      }
+
       if (leafletGeoJsonLayer) {
         leafletMap.removeLayer(leafletGeoJsonLayer);
       }
@@ -333,55 +351,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const defaultQuery = 'petroleum OR lng';
   const defaultTimespan = '7d';
 
-  const resourceMap = {
-    'Fossil Fuels': '(oil OR petroleum OR gas OR lng OR coal)',
-    'Oil & Gas': '(oil OR gas)',
-    Petroleum: 'petroleum',
-    LNG: 'lng',
-    Coal: 'coal',
-    Mining: '(mining)',
-    'Any Mining': '(mining)',
-    ETMs: '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
-    'Aluminum/Bauxite': '(aluminum OR bauxite)',
-    Agroindustry: '(palm oil OR soy OR cattle OR beef)',
-    'Cattle/Beef': '(cattle OR beef)',
-    Logging: '(logging OR timber AND forest)',
-    'Any Logging': '(logging OR timber AND forest)',
-    Timber: 'timber',
-    Biofuels: 'biofuels'
-  };
-
   function buildQueryFromInputs() {
     const resource = resourceInput ? resourceInput.value : '';
     const region = regionInput ? regionInput.value : '';
     const country = countryInput ? countryInput.value.trim() : '';
     const custom = customInput ? customInput.value.trim() : '';
-    let queryTerm = resourceMap[resource] || resource;
-    let locationTerm = '';
-    if (region && region !== 'Global') {
-      if (region === 'Amazon') {
-        locationTerm =
-          'Amazon AND (Brazil OR Peru OR Colombia OR Bolivia OR Venezuela OR Ecuador OR Guyana OR Suriname OR "French Guiana")';
-      } else {
-        locationTerm = region;
-      }
-    }
-    if (country) {
-      locationTerm = locationTerm ? `(${locationTerm} OR ${country})` : country;
-    }
-    let finalQuery = '';
-    if (custom) {
-      finalQuery = custom.includes(' OR ') ? `(${custom})` : custom;
-    } else {
-      const parts = [];
-      if (locationTerm) parts.push(locationTerm);
-      if (queryTerm) parts.push(queryTerm);
-      finalQuery = parts.join(' AND ');
-    }
+    
+    const finalQuery = generateGdeltQuery(resource, region, country, custom);
     return finalQuery || defaultQuery;
   }
 
-  function updateQueryResultsWindow(query = defaultQuery, timespan = defaultTimespan) {
+  function updateQueryResultsWindow(query = defaultQuery, mapTimespan = defaultTimespan) {
+    const headlinesTimespan = window._gdeltTimespanHeadlines || mapTimespan;
+    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
+
     gdeltQueryResultBox.textContent = query;
     function createResultRow(url) {
       const row = document.createElement('div');
@@ -403,17 +386,17 @@ document.addEventListener('DOMContentLoaded', () => {
     timelineUrlBox.innerHTML = '';
     geojsonUrlBox.appendChild(
       createResultRow(
-        `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`
+        `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${mapTimespan}&format=geojson`
       )
     );
     headlinesUrlBox.appendChild(
       createResultRow(
-        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=50&timespan=${timespan}`
+        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=50&timespan=${headlinesTimespan}`
       )
     );
     timelineUrlBox.appendChild(
       createResultRow(
-        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineVolInfo&timespan=1y`
+        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineVolInfo&timespan=${sentimentTimespan}`
       )
     );
   }
@@ -428,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.updateSentimentSection) window.updateSentimentSection(query, timespan);
     updateSectionTitles(query, timespan);
   }
+  window.updateAllFromInputs = updateAllFromInputs;
 
   function handleDropdownInput(activeInput) {
     if (activeInput === customInput && customInput.value.trim() !== '') {
@@ -616,26 +600,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     queryBox.addEventListener('input', debouncedUpdate);
     queryBox.addEventListener('change', debouncedUpdate);
-  }
-
-  const mapTimeButtons = document.getElementById('mapTimeButtons');
-  if (mapTimeButtons) {
-    mapTimeButtons.addEventListener('click', function (e) {
-      if (e.target && e.target.tagName === 'BUTTON') {
-        setTimeout(() => {
-          const query =
-            (document.getElementById('gdeltMapQuery') || {}).value || 'petroleum OR lng';
-          const timespan = window._gdeltTimespanMap || '1d';
-          window.updateLeafletMapPoints(query, timespan);
-          updateSectionTitles(
-            query,
-            timespan,
-            window._gdeltTimespanHeadlines || timespan,
-            window._gdeltTimespanSentiment || '1y'
-          );
-        }, 80);
-      }
-    });
   }
 
 });

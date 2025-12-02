@@ -57,6 +57,7 @@
                     </div>
                     <button class="gdelt-open-btn query-time-btn" id="queryTime1d" type="button" aria-pressed="true" style="min-width:60px;">1d</button>
                     <button class="gdelt-open-btn query-time-btn" id="queryTime7d" type="button" aria-pressed="false" style="min-width:60px;">7d</button>
+                    <button class="gdelt-open-btn query-time-btn" id="queryTime30d" type="button" aria-pressed="false" style="min-width:60px;">1m</button>
                     <button id="resetQueryBtn" type="button" class="gdelt-open-btn query-time-btn" style="min-width:60px;">Reset</button>
                     <button id="shareQueryBtn" type="button" class="gdelt-open-btn query-time-btn" style="min-width:60px;" title="Copy shareable link" onclick="window.copyShareableURL()">🔗 Share</button>
                   </div>
@@ -95,14 +96,21 @@
                       </svg>
                       <div>Please enter a search term or select a resource, region, or country to view</div>
                     </div>
+                    <div id="gdeltMapNoResults" style="display:none;position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:rgba(240,240,240,0.9);color:#0c1b50;font-size:1.15em;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                      </svg>
+                      <div>No results found for this query.</div>
+                    </div>
                     <div class="map-container"><div id="map"></div></div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
-                  <div id="mapTimeButtons" style="display:flex;gap:0.5em;">
-                    <button class="gdelt-open-btn" onclick="setMapTime('1d')" title="Show map for today">1d</button>
-                    <button class="gdelt-open-btn" onclick="setMapTime('7d')" title="Show map for last 7 days">7d</button>
+                  <div id="mapTimeWarning" style="display:none; color:#d9534f; font-size:0.9em; font-weight:bold; margin-right:1em;">
+                    Max. timeframe 7 days
                   </div>
                   <div style="margin-left:auto; display:flex; gap:0.5em;">
+                    <button class="gdelt-open-btn" title="Download GeoJSON" onclick="window.downloadGeoJSON()">⬇️</button>
                     <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltMap')">🔗</button>
                     <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltMap', 'Map', event)">&lt;&gt;</button>
                   </div>
@@ -132,12 +140,6 @@
                   </div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
-                    <div id="headlinesTimeButtons" style="display:flex;gap:0.5em;">
-                        <button class="gdelt-open-btn" onclick="setHeadlinesTime('1d')" title="Show articles from past day">1d</button>
-                        <button class="gdelt-open-btn" onclick="setHeadlinesTime('7d')" title="Show articles from past week">7d</button>
-                        <button class="gdelt-open-btn" onclick="setHeadlinesTime('30d')" title="Show articles from past month">1M</button>
-                        <button class="gdelt-open-btn" onclick="setHeadlinesTime('365d')" title="Show articles from past year">1Y</button>
-                    </div>
                     <span style="margin-left:1em; font-size:0.85em; color:#666; font-style:italic;" title="Google Translate bar appears at bottom of headlines page">🌐 Scroll down for translation</span>
                     <div style="margin-left:auto; display:flex; gap:0.5em;">
                         <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltHeadlines')">🔗</button>
@@ -169,11 +171,6 @@
                   <iframe id="gdeltSentiment" width="100%" height="400" title="GDELT Sentiment" allowfullscreen src="" tabindex="0"></iframe>
                 </div>
                 <div class="gdelt-result-row" style="margin-top: 1.5em; margin-bottom: 1em;">
-                  <div id="sentimentTimeButtons" style="display:flex;gap:0.5em;">
-                    <button class="gdelt-open-btn" onclick="setSentimentTime('1y')" title="Show sentiment for last year">1Y</button>
-                    <button class="gdelt-open-btn" onclick="setSentimentTime('2y')" title="Show sentiment for last two years">2Y</button>
-                    <button class="gdelt-open-btn" onclick="setSentimentTime('5y')" title="Show sentiment for last five years">5Y</button>
-                  </div>
                   <div style="margin-left:auto; display:flex; gap:0.5em;">
                     <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltSentiment')">🔗</button>
                     <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltSentiment', 'Sentiment', event)">&lt;&gt;</button>
