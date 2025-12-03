@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com; style-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com; img-src 'self' https://*.tile.openstreetmap.org https://server.arcgisonline.com data: https://www.google.com https://translate.googleapis.com; connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://unpkg.com https://translate.googleapis.com https://translate.google.com; frame-src https://api.gdeltproject.org https://translate.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://api.gdeltproject.org;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com; style-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com; img-src 'self' https://*.tile.openstreetmap.org https://server.arcgisonline.com data: https://www.google.com https://translate.googleapis.com https://img.shields.io; connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://unpkg.com https://translate.googleapis.com https://translate.google.com; frame-src https://api.gdeltproject.org https://translate.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://api.gdeltproject.org;">
     <title>Extractive Industries News Mapper</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
@@ -144,7 +144,6 @@
                   </div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
-                    <span style="margin-left:1em; font-size:0.85em; color:#666; font-style:italic;" title="Google Translate bar appears at bottom of headlines page">🌐 Scroll down for translation</span>
                     <div style="margin-left:auto; display:flex; gap:0.5em;">
                         <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltHeadlines')">🔗</button>
                         <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltHeadlines', 'Headlines', event)">&lt;&gt;</button>
@@ -184,6 +183,9 @@
         </section>
     </main>
     <div class="footer-bar">
+        <a href="https://github.com/sponsors/hydrospheric0" target="_blank" style="text-decoration: none;">
+          <img src="images/sponsor-badge.svg" alt="Sponsor hydrospheric0" style="height: 28px;"/>
+        </a>
         <div class="footer-note">
             Developed using GDELT by Metolius Research &copy; 2025
         </div>
@@ -223,6 +225,10 @@
           <li>Click the info (<b>i</b>) buttons in each section for more details and tips.</li>
           <li>All data is sourced from <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a>. For advanced users, you can view or modify the underlying GDELT query.</li>
         </ul>
+        If you find this tool useful, please consider supporting its development: <br><br>
+          <a href="https://github.com/sponsors/hydrospheric0" target="_blank" style="text-decoration: none;">
+          <img src="images/sponsor-badge.svg" alt="Sponsor hydrospheric0" style="height: 28px;"/>
+      </a>
       </div>
     </div>
     <div id="queryInfoOverlay" class="query-info-overlay" style="display:none;"></div>
@@ -279,7 +285,6 @@
         </ul>
       </div>
     </div>
-    <script>
-    </script>
+
 </body>
 </html>

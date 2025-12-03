@@ -288,3 +288,14 @@ body {
 .gdelt-result-row {
   margin-top: 1.2em !important;
 }
+
+.bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 60px;
+  background: #22223b;
+  color: #fff;
+  padding: 0 10%;
+  margin-top: 2em;
+}
