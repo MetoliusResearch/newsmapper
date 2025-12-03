@@ -414,7 +414,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Trigger change to update everything via gdeltQuery.js listeners
     if (resourceInput) resourceInput.dispatchEvent(new Event('change'));
   });
-  });
 
   const oldDebug = document.getElementById('queryDebugBox');
   if (oldDebug && oldDebug.parentNode) oldDebug.parentNode.removeChild(oldDebug);
@@ -446,8 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     translateBtnLocal.parentNode.removeChild(translateBtnLocal);
 
   const mapDiv = document.getElementById('map');
-  if (mapDiv) {
-    if (window._leafletMapInitialized) return;
+  if (mapDiv && !window._leafletMapInitialized) {
     window._leafletMapInitialized = true;
     leafletMap = L.map('map', {
       zoomControl: true,
