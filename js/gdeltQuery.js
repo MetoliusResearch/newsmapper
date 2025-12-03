@@ -143,7 +143,7 @@ export function setupGdeltQuery() {
   }
   function getHeadlinesUrl(query, timespan) {
     // Include Google Translate by default
-    return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=100&timespan=${timespan}&trans=googtrans`;
+    return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=100&timespan=${timespan}&trans=googtrans#googtrans(auto|en)`;
   }
   function getSentimentUrl(query, timespan) {
     return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&timelinesmooth=0&timespan=${timespan}&timezoom=yes&FORMAT=html`;

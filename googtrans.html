@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>[climate]</title>
+    
+<STYLE>
+body, div, h1, h2, h3, h4, h5, h6, p, ul, ol, li, dl, dt, dd, img, form, fieldset, input, textarea, blockquote {
+	margin: 0; padding: 0; border: 0;
+}
+
+html, body {
+	background: #fff;
+	/* font: 16px/30px "Helvetica", sans-serif; */
+	font: 13px arial;
+	color: #000;
+	height: 100%;
+	//width: 100%;
+	min-height: 100%;
+	//padding: 5px;
+        //overflow-x: hidden;
+}
+.arttitle {
+    font-family: Roboto,Helvetica,Arial;
+    font-size: 18px;
+    font-weight: 500;
+    color: #000;
+    display: block;
+    padding-bottom: 10px;
+}
+.sourceinfo {
+    font-size: 12px;
+    font-family: Roboto,Helvetica,Arial;
+    color: #888;
+}
+.sourceinfolink {
+    font-size: 12px;
+}
+a {
+    //transition: color 0.1s ease;
+    transition: text-decoration 0.1s ease;
+    text-decoration: none;
+}
+a .arttitle:hover {
+    text-decoration: underline;
+}
+
+.thumbimg {
+    float: right;
+    object-fit: cover;
+    overflow: hidden;
+    height: 80px;
+    width: 80px;
+    margin-left: 7px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.2); border-radius: 5px;
+    -webkit-filter: brightness(100%);
+    -webkit-transition: all 1s ease;
+    -moz-transition: all 1s ease;
+    -o-transition: all 1s ease;
+    -ms-transition: all 1s ease;
+    transition: all 1s ease;
+}
+.thumbimg:hover {
+    -webkit-filter: brightness(30%);
+}
+
+.thumbimgbig {
+    object-fit: cover;
+    overflow: hidden;
+    height: 100px;
+    width: 100px;
+    margin-bottom: -5px;
+}
+
+.imgcollage img {
+    -webkit-filter: brightness(100%);
+    -webkit-transition: all 1s ease;
+    -moz-transition: all 1s ease;
+    -o-transition: all 1s ease;
+    -ms-transition: all 1s ease;
+    transition: all 1s ease;
+    box-shadow: 0 0 2px rgba(0,0,0,0.2); border-radius: 5px;
+}
+.imgcollage img:hover {
+    -webkit-filter: brightness(30%);
+}
+
+.imgcollage {
+   float: left;
+   margin: 3px;
+}
+
+</STYLE>
+
+<script>
+function writedate(el, ds) {
+    var date = new Date(ds);
+    hours = date.getHours();
+    if (hours > 12) { ampm = 'pm'; hours-=12; } else { ampm = 'am' }; if (hours == 12) { ampm='pm'; }
+    document.getElementById(el).innerHTML = ((date.getMonth()+1) + '/' + date.getDate() + '/' + date.getFullYear() + ' ' + hours + ':' + ('0' + date.getMinutes()).slice(-2) + ampm);
+}
+</script>
+
+
+<link href="favicon.ico" type="image/x-icon" rel="icon" /><link href="https://www.gdeltproject.org/favicon.ico" type="image/x-icon" rel="shortcut icon" />
+<link rel="apple-touch-icon" sizes="57x57" href="https://www.gdeltproject.org/images/favicon/apple-icon-57x57.png">
+<link rel="apple-touch-icon" sizes="60x60" href="https://www.gdeltproject.org/images/favicon/apple-icon-60x60.png">
+<link rel="apple-touch-icon" sizes="72x72" href="https://www.gdeltproject.org/images/favicon/apple-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="76x76" href="https://www.gdeltproject.org/images/favicon/apple-icon-76x76.png">
+<link rel="apple-touch-icon" sizes="114x114" href="https://www.gdeltproject.org/images/favicon/apple-icon-114x114.png">
+<link rel="apple-touch-icon" sizes="120x120" href="https://www.gdeltproject.org/images/favicon/apple-icon-120x120.png">
+<link rel="apple-touch-icon" sizes="144x144" href="https://www.gdeltproject.org/images/favicon/apple-icon-144x144.png">
+<link rel="apple-touch-icon" sizes="152x152" href="https://www.gdeltproject.org/images/favicon/apple-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://www.gdeltproject.org/images/favicon/apple-icon-180x180.png">
+<link rel="icon" type="image/png" sizes="192x192"  href="https://www.gdeltproject.org/images/favicon/android-icon-192x192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://www.gdeltproject.org/images/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="96x96" href="https://www.gdeltproject.org/images/favicon/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="16x16" href="https://www.gdeltproject.org/images/favicon/favicon-16x16.png">
+<link rel="manifest" href="https://www.gdeltproject.org/images/favicon/manifest.json">
+<link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/fontawesome-4.7.0/css/font-awesome.min.css">
+<meta name="msapplication-TileColor" content="#ffffff">
+<meta name="msapplication-TileImage" content="https://www.gdeltproject.org/images/favicon/ms-icon-144x144.png">
+<meta name="theme-color" content="#ffffff">
+
+    <script>
+    //define our post function...
+    postheight = function(){
+	var height = document.getElementById('maincontent').offsetHeight + 20;
+	parent.postMessage({"action": "heightchange", "height" : height }, "*");
+    }
+    //our postmessage engine to communicate height changes...
+    window.addEventListener("load", function(){
+    	//confirm that we are an iframe and bail otherwise...
+	if(window.self === window.top) return;
+	//call upon page load...
+	postheight();
+	//call on page resizing (which can cause the layout engine to resize the images and change the page height)...
+	window.addEventListener("resize", postheight);
+	//and additional...
+	var observer = new MutationObserver(postheight);           
+	var config = { attributes: true, childList: true, characterData: true, subtree:true};
+	observer.observe(window.document, config);
+    });
+    </script>
+
+</head>
+<body>
+
+
+<div id="maincontent" style="overflow:hidden; height:auto;">
+<TABLE BORDER=0 WIDTH=100%><A HREF="https://phys.org/news/2025-09-survey-global-south-climate-policies.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://scx2.b-cdn.net/gfx/news/hires/2025/survey-across-the-glob.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Survey across the Global South sheds new light on support for climate policies</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://phys.org/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> phys.org<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_0"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://hijau.bisnis.com/read/20250910/653/1910092/pembiayaan-iklim-bank-pembangunan-tembus-rekor-us137-miliar-pada-2024" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://images.bisnis.com/posts/2025/09/10/1910092/pertanian_kekeringan_reuters_1753318978.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Pembiayaan Iklim Bank Pembangunan Tembus Rekor US$137 Miliar pada 2024</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://hijau.bisnis.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> hijau.bisnis.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_1"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Indonesian &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Indonesia</span> </div></A><A HREF="https://www.dw.com/en/fired-climate-scientists-try-to-preserve-crucial-date-chopped-by-us-president-donald-trump/a-73977766" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://static.dw.com/image/73197674_6.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Experts fired by Trump revive popular climate website – DW – 09 / 15 / 2025</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.dw.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> dw.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_2"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Germany</span> </div></A><A HREF="https://www.dunya.com/surdurulebilir-dunya/biyolojik-cesitlilik-korunmali-haberi-793684" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://img.dunya.com/rcman/Cw1280h720q95gc/storage/files/images/2025/09/11/iklim-agi-0nai_cover.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Biyolojik çeşitlilik korunmalı - Dünya Gazetesi</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.dunya.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> dunya.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_3"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Turkish &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Turkey</span> </div></A><A HREF="https://www.haber3.com/yerel/muglada-iklim-eylem-plani-calistaylari-basladi-haberi-6239940" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://i.haber3.com/2/1280/720/storage/files/images/2025/10/22/6-oyzl_cover.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Muğlada İklim Eylem Planı Çalıştayları Başladı</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.haber3.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> haber3.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_4"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Turkish &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Turkey</span> </div></A><A HREF="https://www.antaranews.com/berita/5282413/menteri-lingkungan-hidup-perubahan-iklim-bertransformasi-jadi-bencana" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://cdn.antaranews.com/cache/1200x800/2025/12/02/WhatsApp-Image-2025-12-02-at-17.50.41.jpeg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Menteri Lingkungan Hidup : Perubahan iklim bertransformasi jadi bencana</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.antaranews.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> antaranews.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 day ago (<span id="sourceinfo_date_5"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Indonesian &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Indonesia</span> </div></A><A HREF="https://allafrica.com/stories/202509100666.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;">  <span class="arttitle">Multilateral Development Banks Hit Record $137 Billion in Climate Finance , Driving Sustainable Development Worldwide</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://allafrica.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> allafrica.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_6"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Nigeria</span> </div></A><A HREF="https://allafrica.com/stories/202509120355.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;">  <span class="arttitle">Southern Africa : Uganda Unveils Climate Finance Strategy to Drive Green Growth</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://allafrica.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> allafrica.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_7"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Nigeria</span> </div></A><A HREF="https://allafrica.com/stories/202510060013.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;">  <span class="arttitle">African Countries Gear Up for Major Push On Climate Innovation , Climate Financing and Climate Change Laws</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://allafrica.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> allafrica.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_8"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Nigeria</span> </div></A><A HREF="https://www.aol.com/articles/ethiopia-hopes-boost-climate-adaptation-183747791.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://media.zenfs.com/en/aol_time_773/aebebc0601482b8c0ca25b0ec1c92ed0" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Ethiopia Hopes to Boost Climate Adaptation</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.aol.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> aol.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_9"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://www.livemint.com/opinion/online-views/india-climate-finance-national-framework-law-green-pfm-budgeting-1-5-trillion-goal-2030-green-supreme-court-fiscal-11760352578638.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://www.livemint.com/lm-img/img/2025/10/14/600x338/ANI-20250903115-0_1756907936522_1760423683282.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Big promises , bigger gaps : Effective climate action demands a cohesive policy approach</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.livemint.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> livemint.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_10"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> India</span> </div></A><A HREF="https://phys.org/news/2025-10-links-climate-anxiety-social-media.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://scx2.b-cdn.net/gfx/news/hires/2025/study-links-climate-an.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Study links climate anxiety to social media use</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://phys.org/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> phys.org<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_11"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://www.livescience.com/planet-earth/climate-change/action-on-climate-change-faces-new-threat-the-doomers-who-think-its-too-late-to-act" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://cdn.mos.cms.futurecdn.net/g6hFnCMG24eCH4XZgXfkTM.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Action on climate change faces new threat : The doomers who think it too late to act</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.livescience.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> livescience.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_12"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://www.mid-day.com/mumbai/mumbai-news/article/mumbai-climate-week-2026-india-to-host-mumbai-climate-week-next-year-heres-all-you-need-to-know-about-event-23600646" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;">  <span class="arttitle">Mumbai Climate Week 2026 : India to host  Mumbai Climate Week  next year , here all you need to know about event</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.mid-day.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> mid-day.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_13"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> India</span> </div></A><A HREF="https://www.thenews.com.pk/latest/1354942-climate-diplomacy" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://www.thenews.com.pk/assets/uploads/updates/2025-11-01/1354942_030820_updates.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Climate diplomacy</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.thenews.com.pk/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> thenews.com.pk<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_14"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Pakistan</span> </div></A><A HREF="https://phys.org/news/2025-11-climate-action.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://scx2.b-cdn.net/gfx/news/hires/2025/climate-action-saves-l.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Climate action saves lives . So why do climate models ignore well - being ? </span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://phys.org/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> phys.org<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;3 days ago (<span id="sourceinfo_date_15"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://www.the-star.co.ke/news/2025-09-10-kenya-showcases-community-led-climate-security-model-at-africa-climate-summit" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://cdn.radioafrica.digital/image/2025/09/564a11fa-9a5b-4bf4-80c3-554940399252.jpeg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Kenya showcases community led climate security model at Africa Climate Summit</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.the-star.co.ke/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> the-star.co.ke<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_16"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Kenya</span> </div></A><A HREF="https://global.udn.com/global_vision/story/8664/9059721" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://uc.udn.com.tw/photo/2025/10/09/0/33323751.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">2025年韓國氣候正義遊行側記 ： 跨世代 、 勞工 、 女性因 「 氣候 」 於廣場重逢 | 文化視角</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://global.udn.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> global.udn.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_17"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Chinese &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Taiwan</span> </div></A><A HREF="https://mynorthwest.com/mynorthwest-politics/king-county-climate-plan/4145852" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://mynorthwest.com/wp-content/uploads/2025/10/Untitled-design-14.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">King County approves ambitious climate action plan</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://mynorthwest.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> mynorthwest.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_18"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://www.the-star.co.ke/news/2025-09-10-ps-omollo-showcases-grassroots-climate-security-model-at-africa-summit" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://cdn.radioafrica.digital/image/2025/09/2a28a35a-40ba-4831-a195-1b2a736555eb.jpeg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">PS Omollo showcases grassroots climate - security model at Africa Summit</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.the-star.co.ke/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> the-star.co.ke<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_19"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Kenya</span> </div></A><A HREF="https://www.livemint.com/economy/climate-change-impact-report-flags-challenges-to-indian-exports-4-5-of-gdp-at-risk-due-to-extreme-climate-events-11764486195959.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://www.livemint.com/lm-img/img/2025/11/30/600x338/CANADA-PORT-2_1752498210594_1752498217825_1764488103104.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Climate change impact ? Report flags challenges to Indian exports , 4 . 5 % of GDP at risk due to extreme climate events</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.livemint.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> livemint.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;3 days ago (<span id="sourceinfo_date_20"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> India</span> </div></A><A HREF="https://www.yahoo.com/news/articles/billion-dollar-disaster-database-gets-140012445.html" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://s.yimg.com/ny/api/res/1.2/A49rGQj_Yu_8R76IPD.2iw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA7Y2Y9d2VicA--/https://media.zenfs.com/en/fox_weather_articles_483/eac29c961825299f62889211b607878e" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">Billion - dollar disaster database gets new life with Climate Central</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.yahoo.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> yahoo.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_21"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> English &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> United States</span> </div></A><A HREF="https://www.cna.com.tw:443/news/aloc/202510240154.aspx" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://imgcdn.cna.com.tw/www/WebPhotos/1024/20251024/1335x768_wmky_0_C20251024000074.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">台灣氣候行動博覽會登場 陳其邁盼凝聚各界共識 | 地方</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.cna.com.tw:443/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> cna.com.tw<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 month ago (<span id="sourceinfo_date_22"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Chinese &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Taiwan</span> </div></A><A HREF="https://www.chinatimes.com/realtimenews/20250917002296-260405" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://images.chinatimes.com/newsphoto/2025-09-17/656/20250917002297.jpg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">環團聯合出席紐約氣候周 辦論壇深入交流 - 生活</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.chinatimes.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> chinatimes.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;2 months ago (<span id="sourceinfo_date_23"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Chinese &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Taiwan</span> </div></A><A HREF="https://www.antaranews.com/berita/5282069/ri-butuh-7576-miliar-dolar-as-untuk-capai-target-perubahan-iklim" TARGET=_BLANK><div style="border: #999 solid 1px; border-radius: 10px; padding: 10px; clear: both; display: block; margin: 7px; max-width: 1024px; margin-bottom: 15px;"> <IMG CLASS="thumbimg" SRC="https://cdn.antaranews.com/cache/1200x800/2025/12/02/WhatsApp-Image-2025-12-02-at-15.53.18.jpeg" onError="this.onerror=null;this.style.display='none';"> <span class="arttitle">RI butuh 757 , 6 miliar dolar AS untuk capai target perubahan iklim</span><span class="sourceinfo"><i class="fa fa-id-card-o" aria-hidden="true"></i> &nbsp;<img src="https://www.antaranews.com/favicon.ico" style="width: 10px; height: 10px;" onError="this.onerror=null;this.style.display='none';"> antaranews.com<br><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp;1 day ago (<span id="sourceinfo_date_24"></span>)<br><i class="fa fa-language" aria-hidden="true"></i> Indonesian &nbsp;&nbsp;<i class="fa fa-map-marker" aria-hidden="true"></i> Indonesia</span> </div></A></TABLE><script>writedate('sourceinfo_date_0', '09/12/2025 15:15 UTC');writedate('sourceinfo_date_1', '09/10/2025 09:30 UTC');writedate('sourceinfo_date_2', '09/15/2025 08:15 UTC');writedate('sourceinfo_date_3', '09/11/2025 23:30 UTC');writedate('sourceinfo_date_4', '10/22/2025 13:30 UTC');writedate('sourceinfo_date_5', '12/02/2025 11:30 UTC');writedate('sourceinfo_date_6', '09/10/2025 21:00 UTC');writedate('sourceinfo_date_7', '09/12/2025 12:30 UTC');writedate('sourceinfo_date_8', '10/06/2025 05:15 UTC');writedate('sourceinfo_date_9', '09/10/2025 01:30 UTC');writedate('sourceinfo_date_10', '10/14/2025 07:15 UTC');writedate('sourceinfo_date_11', '10/31/2025 14:30 UTC');writedate('sourceinfo_date_12', '09/11/2025 15:45 UTC');writedate('sourceinfo_date_13', '10/28/2025 21:45 UTC');writedate('sourceinfo_date_14', '11/01/2025 02:45 UTC');writedate('sourceinfo_date_15', '11/30/2025 14:00 UTC');writedate('sourceinfo_date_16', '09/10/2025 14:45 UTC');writedate('sourceinfo_date_17', '10/09/2025 06:15 UTC');writedate('sourceinfo_date_18', '10/23/2025 02:15 UTC');writedate('sourceinfo_date_19', '09/10/2025 19:15 UTC');writedate('sourceinfo_date_20', '11/30/2025 09:15 UTC');writedate('sourceinfo_date_21', '10/22/2025 16:30 UTC');writedate('sourceinfo_date_22', '10/24/2025 08:45 UTC');writedate('sourceinfo_date_23', '09/17/2025 05:15 UTC');writedate('sourceinfo_date_24', '12/02/2025 09:45 UTC');</script><div id="google_translate_element"></div><script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, multilanguagePage: true}, 'google_translate_element');
+}
+</script><script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+</div>
+<script>postheight();</script>
+
+
+
+
+<!-- this handles the smooth fluid scrolling -->
+<!--<script src="https://api.gdeltproject.org/assets/js/smoothscroll-1.4.6-gdeltmodified/smoothscroll.gdeltmodified.js"></script>-->
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZZ0YC7MJ34"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZZ0YC7MJ34');
+</script>
+
+</body>
+</html>
