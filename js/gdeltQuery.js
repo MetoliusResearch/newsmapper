@@ -6,8 +6,8 @@ const resourceMap = {
   Coal: 'coal',
   Mining: 'mining',
   'Any Mining': 'mining',
-  Gold: 'gold AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore) AND NOT medal',
-  Silver: 'silver AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore) AND NOT medal',
+  Gold: 'gold AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
+  Silver: 'silver AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
   Iron: 'iron AND ("iron ore" OR ore OR mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster)',
   Copper: 'copper AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
   Nickel: 'nickel AND (mining OR mine OR production OR exploration OR mineral OR metal OR concession OR permit OR disaster OR ore)',
@@ -47,18 +47,23 @@ export function generateGdeltQuery(resource, region, country, custom) {
   country = country ? country.trim() : '';
   custom = custom ? custom.trim() : '';
 
-  if (custom && custom.includes(',')) {
-    const parts = custom.split(',').map(p => p.trim());
-    if (parts.length === 2) {
-      custom = parts[0];
-      if (!country) country = parts[1];
+  // Handle comma-separated values in custom field as OR
+  if (custom && custom.includes(',') && !custom.includes(' AND ') && !custom.includes(' OR ') && !custom.includes('(')) {
+    const parts = custom.split(',').map(p => {
+      let part = p.trim();
+      if (part.includes(' ') && !part.startsWith('"')) {
+        return `"${part}"`;
+      }
+      return part;
+    }).filter(p => p);
+    
+    if (parts.length > 1) {
+      custom = `(${parts.join(' OR ')})`;
     }
   }
   
   if (custom && !custom.startsWith('"') && !custom.includes('(') && !custom.includes(' AND ') && !custom.includes(' OR ')) {
-    if (custom.includes(' ')) {
-      custom = `"${custom}"`;
-    }
+    // Removed auto-quoting for spaces to allow implicit AND (e.g. "Gold Mali")
   }
 
   // Case-insensitive resource lookup
@@ -216,7 +221,6 @@ export function setupGdeltQuery() {
     if (window.setIframeWithLoader) {
       window.setIframeWithLoader('gdeltMap', 'gdeltMapLoader', mapUrl);
     }
-    checkMapNoResults(query, timespan);
   };
   window.setHeadlinesTime = function (timespan) {
     window._gdeltTimespanHeadlines = timespan;
@@ -374,23 +378,6 @@ export function setupGdeltQuery() {
         headlinesIframe.style.visibility = 'hidden';
       });
   }
-  function checkMapNoResults(query, timespan) {
-    const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&format=json&timespan=${timespan}`;
-    const noResultsDiv = document.getElementById('gdeltMapNoResults');
-    if (!noResultsDiv) return;
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.features || data.features.length === 0) {
-          noResultsDiv.style.display = 'block';
-        } else {
-          noResultsDiv.style.display = 'none';
-        }
-      })
-      .catch(() => {
-        noResultsDiv.style.display = 'none';
-      });
-  }
   function checkSentimentNoResults(query, timespan) {
     const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&format=json&timespan=${timespan}`;
     const noResultsDiv = document.getElementById('gdeltSentimentNoResults');
@@ -449,11 +436,13 @@ export function setupGdeltQuery() {
       window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
       window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', sentimentUrl);
     }
-    checkMapNoResults(query, mapTimespan);
     checkHeadlinesNoResults(query, headlinesTimespan);
     checkSentimentNoResults(query, sentimentTimespan);
     if (window.updateLeafletMapPoints) {
       window.updateLeafletMapPoints(query, mapTimespan);
+    }
+    if (window.updateQueryResultsWindow) {
+      window.updateQueryResultsWindow(query, mapTimespan);
     }
   }
 

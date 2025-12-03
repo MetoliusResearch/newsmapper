@@ -300,21 +300,10 @@ const DEFAULT_SENTIMENT_QUERY = 'petroleum OR lng';
 const DEFAULT_MAP_TIMESPAN = '1d';
 const DEFAULT_HEADLINES_TIMESPAN = '1d';
 const DEFAULT_SENTIMENT_TIMESPAN = '1y';
-const DEFAULT_HEADLINES_MAX = 50;
 
 window._gdeltTimespanMap = window._gdeltTimespanMap || DEFAULT_MAP_TIMESPAN;
 window._gdeltTimespanHeadlines = window._gdeltTimespanHeadlines || DEFAULT_HEADLINES_TIMESPAN;
 window._gdeltTimespanSentiment = window._gdeltTimespanSentiment || DEFAULT_SENTIMENT_TIMESPAN;
-
-function updateSectionTitles(query, timespan) {
-  const mapTitle = document.getElementById('sectionTitleMap');
-  if (mapTitle) mapTitle.textContent = `Map: ${query} (${timespan})`;
-  const headlinesTitle = document.getElementById('sectionTitleHeadlines');
-  if (headlinesTitle) headlinesTitle.textContent = `Headlines: ${query} (${timespan})`;
-  const sentimentTitle = document.getElementById('sectionTitleSentiment');
-  if (sentimentTitle)
-    sentimentTitle.textContent = `Sentiment: ${query} (${timespan === '1y' ? 'last year' : timespan})`;
-}
 
 document.addEventListener('DOMContentLoaded', () => {
   setupDropdowns();
@@ -365,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const headlinesTimespan = window._gdeltTimespanHeadlines || mapTimespan;
     const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
 
-    gdeltQueryResultBox.textContent = query;
+    if (gdeltQueryResultBox) gdeltQueryResultBox.textContent = query;
     function createResultRow(url) {
       const row = document.createElement('div');
       row.className = 'query-result-row';
@@ -381,63 +370,37 @@ document.addEventListener('DOMContentLoaded', () => {
       row.appendChild(openBtn);
       return row;
     }
-    geojsonUrlBox.innerHTML = '';
-    headlinesUrlBox.innerHTML = '';
-    timelineUrlBox.innerHTML = '';
-    geojsonUrlBox.appendChild(
-      createResultRow(
-        `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${mapTimespan}&format=geojson`
-      )
-    );
-    headlinesUrlBox.appendChild(
-      createResultRow(
-        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=50&timespan=${headlinesTimespan}`
-      )
-    );
-    timelineUrlBox.appendChild(
-      createResultRow(
-        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineVolInfo&timespan=${sentimentTimespan}`
-      )
-    );
-  }
-
-  function updateAllFromInputs() {
-    const query = buildQueryFromInputs();
-    const timespan = window._gdeltTimespanMap || defaultTimespan;
-    if (gdeltMapQuery) gdeltMapQuery.value = query;
-    updateQueryResultsWindow(query, timespan);
-    window.updateLeafletMapPoints(query, timespan);
-    if (window.updateHeadlinesSection) window.updateHeadlinesSection(query, timespan, 50, true);
-    if (window.updateSentimentSection) window.updateSentimentSection(query, timespan);
-    updateSectionTitles(query, timespan);
-  }
-  window.updateAllFromInputs = updateAllFromInputs;
-
-  function handleDropdownInput(activeInput) {
-    if (activeInput === customInput && customInput.value.trim() !== '') {
-      if (resourceInput) resourceInput.value = '';
-      if (regionInput) regionInput.value = '';
-      if (countryInput) countryInput.value = '';
+    if (geojsonUrlBox) {
+      geojsonUrlBox.innerHTML = '';
+      geojsonUrlBox.appendChild(
+        createResultRow(
+          `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${mapTimespan}&format=geojson`
+        )
+      );
     }
-    updateAllFromInputs();
+    if (headlinesUrlBox) {
+      headlinesUrlBox.innerHTML = '';
+      headlinesUrlBox.appendChild(
+        createResultRow(
+          `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=50&timespan=${headlinesTimespan}`
+        )
+      );
+    }
+    if (timelineUrlBox) {
+      timelineUrlBox.innerHTML = '';
+      timelineUrlBox.appendChild(
+        createResultRow(
+          `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineVolInfo&timespan=${sentimentTimespan}`
+        )
+      );
+    }
   }
-  if (resourceInput) {
-    resourceInput.addEventListener('change', () => handleDropdownInput(resourceInput));
-    resourceInput.addEventListener('input', () => handleDropdownInput(resourceInput));
-  }
-  if (regionInput) {
-    regionInput.addEventListener('change', () => handleDropdownInput(regionInput));
-    regionInput.addEventListener('input', () => handleDropdownInput(regionInput));
-  }
-  if (countryInput) {
-    countryInput.addEventListener('change', () => handleDropdownInput(countryInput));
-    countryInput.addEventListener('input', () => handleDropdownInput(countryInput));
-  }
-  if (customInput) {
-    customInput.addEventListener('input', () => handleDropdownInput(customInput));
-  }
+  window.updateQueryResultsWindow = updateQueryResultsWindow;
 
-  updateAllFromInputs();
+  // Redundant listeners removed. Logic is handled in js/gdeltQuery.js
+  // Initial update
+  const initialQuery = buildQueryFromInputs();
+  updateQueryResultsWindow(initialQuery, defaultTimespan);
 
   resetBtn.addEventListener('click', () => {
     if (resourceInput) resourceInput.value = '';
@@ -446,29 +409,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (customInput) customInput.value = '';
     if (gdeltMapQuery) gdeltMapQuery.value = defaultQuery;
     window._gdeltTimespanMap = defaultTimespan;
-    updateAllFromInputs();
-    updateSectionTitles(defaultQuery, defaultTimespan);
+    // updateAllFromInputs(); // Removed
+    // updateSectionTitles(defaultQuery, defaultTimespan); // Handled by gdeltQuery.js
+    // Trigger change to update everything via gdeltQuery.js listeners
+    if (resourceInput) resourceInput.dispatchEvent(new Event('change'));
+  });
   });
 
   const oldDebug = document.getElementById('queryDebugBox');
   if (oldDebug && oldDebug.parentNode) oldDebug.parentNode.removeChild(oldDebug);
 
   window.updateLeafletMapPoints(DEFAULT_MAP_QUERY, DEFAULT_MAP_TIMESPAN);
-  if (window.updateHeadlinesSection)
-    window.updateHeadlinesSection(
-      DEFAULT_HEADLINES_QUERY,
-      DEFAULT_HEADLINES_TIMESPAN,
-      DEFAULT_HEADLINES_MAX,
-      true
-    );
-  if (window.updateSentimentSection)
-    window.updateSentimentSection(DEFAULT_SENTIMENT_QUERY, DEFAULT_SENTIMENT_TIMESPAN);
-  updateSectionTitles(
-    DEFAULT_MAP_QUERY,
-    DEFAULT_MAP_TIMESPAN,
-    DEFAULT_HEADLINES_TIMESPAN,
-    DEFAULT_SENTIMENT_TIMESPAN
-  );
 
   function addMapAttribution() {
     let attr = document.getElementById('leaflet-map-attribution');
@@ -577,39 +528,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const queryBox = document.getElementById('gdeltMapQuery');
-  if (queryBox) {
-    let lastQuery = queryBox.value || 'petroleum OR lng';
-    let lastTimespan = window._gdeltTimespanMap || '1d';
-    const updateMapFromQuery = () => {
-      const query = queryBox.value || 'petroleum OR lng';
-      const timespan = window._gdeltTimespanMap || '1d';
-      if (query !== lastQuery || timespan !== lastTimespan) {
-        window.updateLeafletMapPoints(query, timespan);
-        if (window.updateHeadlinesSection) window.updateHeadlinesSection(query, timespan);
-        if (window.updateSentimentSection) window.updateSentimentSection(query, '1y');
-        updateSectionTitles(query, timespan);
-        lastQuery = query;
-        lastTimespan = timespan;
-      }
-    };
-    let debounceTimer = null;
-    const debouncedUpdate = () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(updateMapFromQuery, 120);
-    };
-    queryBox.addEventListener('input', debouncedUpdate);
-    queryBox.addEventListener('change', debouncedUpdate);
-  }
-
 });
-
-window.setMapTime = function (timespan) {
-  window._gdeltTimespanMap = timespan;
-  const queryBox = document.getElementById('gdeltMapQuery');
-  const query = queryBox ? queryBox.value : 'petroleum OR lng';
-  window.updateLeafletMapPoints(query, timespan);
-  if (window.updateHeadlinesSection) window.updateHeadlinesSection(query, timespan);
-  if (window.updateSentimentSection) window.updateSentimentSection(query, '1y');
-  updateSectionTitles(query, timespan);
-};
