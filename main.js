@@ -332,6 +332,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const headlinesUrlBox = document.getElementById('headlinesUrlBox');
   const timelineUrlBox = document.getElementById('timelineUrlBox');
   const resourceInput = document.getElementById('resourceInput');
+  if (resourceInput) {
+    resourceInput.value = 'Oil';
+    // Dispatch change event to trigger updateGdeltIframes in gdeltQuery.js
+    // This ensures all iframes (Map, Headlines, Sentiment) are updated on load
+    setTimeout(() => {
+      resourceInput.dispatchEvent(new Event('change'));
+    }, 100);
+  }
   const regionInput = document.getElementById('regionInput');
   const countryInput = document.getElementById('countryInput');
   const customInput = document.getElementById('customInput');
@@ -418,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const oldDebug = document.getElementById('queryDebugBox');
   if (oldDebug && oldDebug.parentNode) oldDebug.parentNode.removeChild(oldDebug);
 
-  window.updateLeafletMapPoints(DEFAULT_MAP_QUERY, DEFAULT_MAP_TIMESPAN);
+  window.updateLeafletMapPoints(initialQuery, DEFAULT_MAP_TIMESPAN);
 
   function addMapAttribution() {
     let attr = document.getElementById('leaflet-map-attribution');

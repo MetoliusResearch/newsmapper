@@ -95,17 +95,11 @@ export function generateGdeltQuery(resource, region, country, custom) {
     locationTerm = locationTerm ? `(${locationTerm} OR ${quotedCountry})` : quotedCountry;
   }
   let finalQuery = '';
-  if (custom) {
-    const parts = [];
-    if (locationTerm) parts.push(locationTerm);
-    parts.push(custom);
-    finalQuery = parts.join(' AND ');
-  } else {
-    const parts = [];
-    if (locationTerm) parts.push(locationTerm);
-    if (queryTerm) parts.push(queryTerm);
-    finalQuery = parts.join(' AND ');
-  }
+  const parts = [];
+  if (locationTerm) parts.push(locationTerm);
+  if (queryTerm) parts.push(queryTerm);
+  if (custom) parts.push(custom);
+  finalQuery = parts.join(' AND ');
   return finalQuery;
 }
 
