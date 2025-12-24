@@ -20,7 +20,9 @@ The Extractive Industries News Mapper was inspired in part by gdelt.github.io
 
 [MIT](LICENSE)
 
-## Support this project
+## Sponsor this project
+
+Buy Me a Coffee: https://buymeacoffee.com/bartg
 
 <a href="https://buymeacoffee.com/bartg">
 	<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="180" />
