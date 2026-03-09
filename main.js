@@ -88,30 +88,28 @@ let currentMapMode = 'points'; // default to 'points' (Newsmap), not 'heatmap'
 let leafletBaseLayer = null;
 let mapUpdateTimer = null;
 
-window.updateLeafletMapPoints = function (query, timespan) {
+window.updateLeafletMapPoints = function (query, timespan, cachedArticles) {
   if (mapUpdateTimer) clearTimeout(mapUpdateTimer);
   mapUpdateTimer = setTimeout(() => {
-    performMapUpdate(query, timespan);
+    performMapUpdate(query, timespan, cachedArticles);
   }, 200);
 };
 
-function performMapUpdate(query, timespan) {
+function performMapUpdate(query, timespan, cachedArticles) {
   if (!leafletMap) return;
   const loader = document.getElementById('gdeltMapLoader');
   const noResults = document.getElementById('gdeltMapNoResults');
   if (loader) loader.style.display = 'flex';
   if (noResults) noResults.style.display = 'none';
-  
-  // GDELT geo/geo API is discontinued — use DOC ArtList + country centroid aggregation
+
   const docUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${timespan}&format=json`;
   window.lastMapUrl = docUrl;
-  window.lastMapGeoJsonUrl = null; // GeoJSON built in-memory; use window.lastComputedMapGeoJson
+  window.lastMapGeoJsonUrl = null;
 
-  console.log('[DEBUG] Fetching articles for map:', docUrl);
-  fetch(docUrl)
-    .then((r) => r.json())
-    .then((docData) => {
-      const articles = docData.articles || [];
+  // Inner function: aggregate articles by sourcecountry and render Leaflet map.
+  // The GeoJSON is generated entirely from article sourcecountry + COUNTRY_CENTROIDS —
+  // no external geo API needed.
+  function buildAndRenderMap(articles) {
       const countryCounts = {};
       const countryArticles = {};
       articles.forEach(art => {
@@ -383,12 +381,21 @@ function performMapUpdate(query, timespan) {
       }
 
       if (loader) loader.style.display = 'none';
-    })
-    .catch((err) => {
-      if (loader) loader.style.display = 'none';
-      console.error('[DEBUG] Map fetch error:', err);
-    });
-};
+  }
+
+  if (cachedArticles) {
+    // Reuse article data already fetched by the headlines load — no extra API call.
+    buildAndRenderMap(cachedArticles);
+  } else {
+    fetch(docUrl)
+      .then((r) => r.json())
+      .then((docData) => buildAndRenderMap(docData.articles || []))
+      .catch((err) => {
+        if (loader) loader.style.display = 'none';
+        console.error('[DEBUG] Map fetch error:', err);
+      });
+  }
+}
 
 const DEFAULT_MAP_QUERY = 'petroleum OR lng';
 const DEFAULT_HEADLINES_QUERY = 'petroleum OR lng';

@@ -81,6 +81,37 @@
             </div>
             <div class="floating-box">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span id="headlinesTitle">Headlines</span>
+                  <button class="info-btn" id="headlinesInfoBtn" title="About Headlines" aria-label="Headlines Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
+                    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="10" r="9" stroke="#0c1b50" stroke-width="2" fill="#fff"/>
+                      <text x="10" y="15" text-anchor="middle" font-size="12" fill="#0c1b50" font-family="Arial, Helvetica, sans-serif" font-weight="bold">i</text>
+                    </svg>
+                  </button>
+                </div>
+                <div style="position:relative;">
+                  <div id="gdeltHeadlinesLoader" class="loader-overlay" style="display:none;position:absolute;left:0;top:0;width:100%;height:100%;z-index:10;align-items:center;justify-content:center;">
+                    <div class="loader-spinner"></div>
+                  </div>
+                  <iframe id="gdeltHeadlines" width="100%" height="500" title="GDELT Headlines" allowfullscreen src="" tabindex="0"></iframe>
+                  <div id="gdeltHeadlinesPlaceholder" onclick="window.triggerHeadlinesLoad && window.triggerHeadlinesLoad()" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;cursor:pointer;" title="Click to load Headlines">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                    <div style="background:#0c1b50;color:#fff;border-radius:8px;padding:0.6em 1.8em;font-size:1.1em;font-weight:600;">Show Headlines</div>
+                    <div style="font-size:0.8em;color:#777;">Click to load</div>
+                  </div>
+                </div>
+                <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
+                    <div style="margin-left:auto; display:flex; gap:0.5em;">
+                        <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltHeadlines')">🔗</button>
+                        <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltHeadlines', 'Headlines', event)">&lt;&gt;</button>
+                    </div>
+                </div>
+            </div>
+            <div class="floating-box">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
                   <span id="mapTitle">News Map</span>
                   <button class="info-btn" id="mapInfoBtn" title="About News Map" aria-label="News Map Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
                     <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -119,37 +150,6 @@
                     <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltMap')">🔗</button>
                     <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltMap', 'Map', event)">&lt;&gt;</button>
                   </div>
-                </div>
-            </div>
-            <div class="floating-box">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <span id="headlinesTitle">Headlines</span>
-                  <button class="info-btn" id="headlinesInfoBtn" title="About Headlines" aria-label="Headlines Info" style="background: none; border: none; padding: 0; margin-left: 0.5em; cursor: pointer;">
-                    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                      <circle cx="10" cy="10" r="9" stroke="#0c1b50" stroke-width="2" fill="#fff"/>
-                      <text x="10" y="15" text-anchor="middle" font-size="12" fill="#0c1b50" font-family="Arial, Helvetica, sans-serif" font-weight="bold">i</text>
-                    </svg>
-                  </button>
-                </div>
-                <div style="position:relative;">
-                  <div id="gdeltHeadlinesLoader" class="loader-overlay" style="display:none;position:absolute;left:0;top:0;width:100%;height:100%;z-index:10;align-items:center;justify-content:center;">
-                    <div class="loader-spinner"></div>
-                  </div>
-                  <iframe id="gdeltHeadlines" width="100%" height="500" title="GDELT Headlines" allowfullscreen src="" tabindex="0"></iframe>
-                  <div id="gdeltHeadlinesPlaceholder" onclick="window.triggerHeadlinesLoad && window.triggerHeadlinesLoad()" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;cursor:pointer;" title="Click to load Headlines">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                    </svg>
-                    <div style="background:#0c1b50;color:#fff;border-radius:8px;padding:0.6em 1.8em;font-size:1.1em;font-weight:600;">Show Headlines</div>
-                    <div style="font-size:0.8em;color:#777;">Click to load</div>
-                  </div>
-                </div>
-                <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
-                    <div style="margin-left:auto; display:flex; gap:0.5em;">
-                        <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltHeadlines')">🔗</button>
-                        <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltHeadlines', 'Headlines', event)">&lt;&gt;</button>
-                    </div>
                 </div>
             </div>
             <div class="floating-box">

@@ -386,6 +386,7 @@ export function setupGdeltQuery() {
   }
 
   // Load only the News Map (GeoJSON + Leaflet). Called when user clicks the map placeholder.
+  // Uses cached article data from triggerHeadlinesLoad if query + timespan match.
   window.triggerMapLoad = function () {
     const query = buildQuery();
     if (!query || !query.trim()) return;
@@ -396,11 +397,15 @@ export function setupGdeltQuery() {
     const mapNoResults = document.getElementById('gdeltMapNoResults');
     if (mapPh) mapPh.style.display = 'none';
     if (mapNoResults) mapNoResults.style.display = 'none';
-    if (window.updateLeafletMapPoints) window.updateLeafletMapPoints(query, mapTimespan);
+    const cacheKey = query + '|' + mapTimespan;
+    const cachedArticles = (window._cachedArticlesKey === cacheKey) ? window._cachedArticles : null;
+    if (window.updateLeafletMapPoints) window.updateLeafletMapPoints(query, mapTimespan, cachedArticles);
     if (window.updateQueryResultsWindow) window.updateQueryResultsWindow(query, mapTimespan);
   };
 
   // Load only Headlines iframe. Called when user clicks the headlines placeholder.
+  // Also schedules a delayed JSON pre-fetch (6s after iframe request) to cache articles
+  // for the map, so triggerMapLoad can reuse them without a second API call.
   window.triggerHeadlinesLoad = function () {
     const query = buildQuery();
     if (!query || !query.trim()) return;
@@ -411,6 +416,19 @@ export function setupGdeltQuery() {
     if (headlinesPh) headlinesPh.style.display = 'none';
     if (window.setIframeWithLoader) window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
     checkHeadlinesNoResults(query, headlinesTimespan);
+    // Pre-fetch JSON for map cache after 6s (avoids simultaneous doc-endpoint requests)
+    window._cachedArticlesKey = null; // invalidate while pending
+    const cacheKey = query + '|' + headlinesTimespan;
+    const jsonUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${headlinesTimespan}&format=json`;
+    setTimeout(() => {
+      fetch(jsonUrl)
+        .then(r => r.json())
+        .then(data => {
+          window._cachedArticles = data.articles || [];
+          window._cachedArticlesKey = cacheKey;
+        })
+        .catch(() => {});
+    }, 6000);
   };
 
   // Load only Sentiment iframe. Called when user clicks the sentiment placeholder.
