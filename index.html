@@ -13,7 +13,7 @@
 <body>
     <div class="top-bar">
       <div style="display: flex; flex-direction: column; margin-bottom: 18px;">
-        <span class="top-bar-title" style="margin-bottom: 4px;">NewsMapper 1.0</span>
+        <span class="top-bar-title" style="margin-bottom: 4px;">NewsMapper 1.1</span>
         <span style="font-size: 1.2rem; font-weight: 300; color: #ddd; font-style: italic;">Extractive industries</span>
       </div>
       <div class="header-right">
@@ -93,12 +93,13 @@
                     <div id="gdeltMapLoader" class="loader-overlay" style="display:none;">
                       <div class="loader-spinner"></div>
                     </div>
-                    <div id="gdeltMapPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                    <div id="gdeltMapPlaceholder" onclick="window.triggerMapLoad && window.triggerMapLoad()" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;cursor:pointer;" title="Click to load News Map">
                       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="10" r="3"/>
                         <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"/>
                       </svg>
-                      <div>Please enter a search term or select a resource, region, or country to view</div>
+                      <div style="background:#0c1b50;color:#fff;border-radius:8px;padding:0.6em 1.8em;font-size:1.1em;font-weight:600;">Show News Map</div>
+                      <div style="font-size:0.8em;color:#777;">Click to load</div>
                     </div>
                     <div id="gdeltMapNoResults" style="display:none;position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:rgba(240,240,240,0.9);color:#0c1b50;font-size:1.15em;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
                       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -135,12 +136,13 @@
                     <div class="loader-spinner"></div>
                   </div>
                   <iframe id="gdeltHeadlines" width="100%" height="500" title="GDELT Headlines" allowfullscreen src="" tabindex="0"></iframe>
-                  <div id="gdeltHeadlinesPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                  <div id="gdeltHeadlinesPlaceholder" onclick="window.triggerHeadlinesLoad && window.triggerHeadlinesLoad()" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;cursor:pointer;" title="Click to load Headlines">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
                       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                     </svg>
-                    <div>Please enter a search term or select a resource, region, or country to view</div>
+                    <div style="background:#0c1b50;color:#fff;border-radius:8px;padding:0.6em 1.8em;font-size:1.1em;font-weight:600;">Show Headlines</div>
+                    <div style="font-size:0.8em;color:#777;">Click to load</div>
                   </div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
@@ -164,12 +166,13 @@
                   <div id="gdeltSentimentLoader" class="loader-overlay" style="display:none;">
                     <div class="loader-spinner"></div>
                   </div>
-                  <div id="gdeltSentimentPlaceholder" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;">
+                  <div id="gdeltSentimentPlaceholder" onclick="window.triggerSentimentLoad && window.triggerSentimentLoad()" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;cursor:pointer;" title="Click to load Sentiment Timeline">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M3 3v18h18"/>
                       <path d="m19 9-5 5-4-4-3 3"/>
                     </svg>
-                    <div>Please enter a search term or select a resource, region, or country to view</div>
+                    <div style="background:#0c1b50;color:#fff;border-radius:8px;padding:0.6em 1.8em;font-size:1.1em;font-weight:600;">Show Sentiment</div>
+                    <div style="font-size:0.8em;color:#777;">Click to load</div>
                   </div>
                   <iframe id="gdeltSentiment" width="100%" height="400" title="GDELT Sentiment" allowfullscreen src="" tabindex="0"></iframe>
                 </div>

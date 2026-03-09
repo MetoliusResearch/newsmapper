@@ -110,6 +110,9 @@ export function setupGdeltQuery() {
   const customInput = document.getElementById('customInput');
   const queryBox = document.getElementById('gdeltMapQuery');
 
+  // Timer to stagger sentiment iframe load (avoids simultaneous doc-endpoint requests)
+  let _pendingSentimentTimer = null;
+
   window.openQuery = function (inputId) {
     const input = document.getElementById(inputId);
     if (input && input.value) {
@@ -130,10 +133,12 @@ export function setupGdeltQuery() {
     return finalQuery;
   }
   function getMapUrl(query, timespan) {
-    return `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}`;
+    // geo/geo API discontinued — use DOC ArtList endpoint
+    return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${timespan}&format=json`;
   }
   function getMapGeoJsonUrl(query, timespan) {
-    return `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
+    // GeoJSON is built in-memory from the DOC API response
+    return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${timespan}&format=json`;
   }
   function getHeadlinesUrl(query, timespan) {
     // Include Google Translate by default
@@ -202,50 +207,23 @@ export function setupGdeltQuery() {
   window.setMapTime = function (timespan) {
     window._gdeltTimespanMap = timespan;
     const query = buildQuery();
-    updateSectionTitles(
-      query,
-      timespan,
-      window._gdeltTimespanHeadlines || '1d',
-      window._gdeltTimespanSentiment || '1y'
-    );
-    const mapUrl = getMapUrl(query, timespan);
-    const mapGeoJsonUrl = getMapGeoJsonUrl(query, timespan);
-    window.lastMapUrl = mapUrl;
-    window.lastMapGeoJsonUrl = mapGeoJsonUrl;
-    if (window.setIframeWithLoader) {
-      window.setIframeWithLoader('gdeltMap', 'gdeltMapLoader', mapUrl);
-    }
+    updateSectionTitles(query, timespan, window._gdeltTimespanHeadlines || '1d', window._gdeltTimespanSentiment || '1y');
+    const mapPh = document.getElementById('gdeltMapPlaceholder');
+    if (mapPh) mapPh.style.display = 'flex';
   };
   window.setHeadlinesTime = function (timespan) {
     window._gdeltTimespanHeadlines = timespan;
     const query = buildQuery();
-    updateSectionTitles(
-      query,
-      window._gdeltTimespanMap || '1d',
-      timespan,
-      window._gdeltTimespanSentiment || '1y'
-    );
-    const headlinesUrl = getHeadlinesUrl(query, timespan);
-    window.lastHeadlinesUrl = headlinesUrl;
-    if (window.setIframeWithLoader) {
-      window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
-    }
-    checkHeadlinesNoResults(query, timespan);
+    updateSectionTitles(query, window._gdeltTimespanMap || '1d', timespan, window._gdeltTimespanSentiment || '1y');
+    const headlinesPh = document.getElementById('gdeltHeadlinesPlaceholder');
+    if (headlinesPh) headlinesPh.style.display = 'flex';
   };
   window.setSentimentTime = function (timespan) {
     window._gdeltTimespanSentiment = timespan;
     const query = buildQuery();
-    updateSectionTitles(
-      query,
-      window._gdeltTimespanMap || '1d',
-      window._gdeltTimespanHeadlines || '1d',
-      timespan
-    );
-    const sentimentUrl = getSentimentUrl(query, timespan);
-    window.lastSentimentUrl = sentimentUrl;
-    if (window.setIframeWithLoader) {
-      window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', sentimentUrl);
-    }
+    updateSectionTitles(query, window._gdeltTimespanMap || '1d', window._gdeltTimespanHeadlines || '1d', timespan);
+    const sentimentPh = document.getElementById('gdeltSentimentPlaceholder');
+    if (sentimentPh) sentimentPh.style.display = 'flex';
   };
 
   function clearCustomIfNeeded() {
@@ -257,27 +235,27 @@ export function setupGdeltQuery() {
   if (resourceInput)
     resourceInput.addEventListener('change', function () {
       clearCustomIfNeeded();
-      updateGdeltIframes();
+      refreshQueryAndResetPlaceholders();
     });
   if (regionInput)
     regionInput.addEventListener('change', function () {
       if (regionInput.value && regionInput.value !== 'Global') {
         if (countryInput) countryInput.value = '';
       }
-      updateGdeltIframes();
+      refreshQueryAndResetPlaceholders();
     });
   if (countryInput) {
     countryInput.addEventListener('input', function () {
       if (countryInput.value && countryInput.value.trim() !== '') {
         if (regionInput) regionInput.value = 'Global';
       }
-      updateGdeltIframes();
+      refreshQueryAndResetPlaceholders();
     });
     countryInput.addEventListener('change', function () {
       if (countryInput.value && countryInput.value.trim() !== '') {
         if (regionInput) regionInput.value = 'Global';
       }
-      updateGdeltIframes();
+      refreshQueryAndResetPlaceholders();
     });
   }
   if (customInput)
@@ -285,7 +263,7 @@ export function setupGdeltQuery() {
       if (customInput.value.trim() !== '') {
         if (resourceInput) resourceInput.value = '';
       }
-      updateGdeltIframes();
+      refreshQueryAndResetPlaceholders();
     });
 
   // Query Time Buttons Logic
@@ -317,10 +295,7 @@ export function setupGdeltQuery() {
       }
     });
     
-    updateGdeltIframes();
-    if (window.updateAllFromInputs) {
-      window.updateAllFromInputs();
-    }
+    refreshQueryAndResetPlaceholders();
   }
 
   if (queryTime1d) {
@@ -343,7 +318,7 @@ export function setupGdeltQuery() {
       window._gdeltTimespanMap = '1d';
       window._gdeltTimespanHeadlines = '1d';
       window._gdeltTimespanSentiment = '1y';
-      updateGdeltIframes();
+      refreshQueryAndResetPlaceholders();
     });
   }
 
@@ -390,6 +365,67 @@ export function setupGdeltQuery() {
       });
   }
 
+  // Updates query text + section titles and re-shows placeholders.
+  // Called on every input change. Does NOT fire any API requests.
+  function refreshQueryAndResetPlaceholders() {
+    const query = buildQuery();
+    const mapTimespan = window._gdeltTimespanMap || '1d';
+    const headlinesTimespan = window._gdeltTimespanHeadlines || '1d';
+    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
+    updateSectionTitles(query, mapTimespan, headlinesTimespan, sentimentTimespan);
+    const mapPh = document.getElementById('gdeltMapPlaceholder');
+    const headlinesPh = document.getElementById('gdeltHeadlinesPlaceholder');
+    const sentimentPh = document.getElementById('gdeltSentimentPlaceholder');
+    const mapNoResults = document.getElementById('gdeltMapNoResults');
+    if (mapPh) mapPh.style.display = 'flex';
+    if (headlinesPh) headlinesPh.style.display = 'flex';
+    if (sentimentPh) sentimentPh.style.display = 'flex';
+    if (mapNoResults) mapNoResults.style.display = 'none';
+    if (_pendingSentimentTimer) { clearTimeout(_pendingSentimentTimer); _pendingSentimentTimer = null; }
+    if (window.updateQueryResultsWindow) window.updateQueryResultsWindow(query, mapTimespan);
+  }
+
+  // Load only the News Map (GeoJSON + Leaflet). Called when user clicks the map placeholder.
+  window.triggerMapLoad = function () {
+    const query = buildQuery();
+    if (!query || !query.trim()) return;
+    const mapTimespan = window._gdeltTimespanMap || '1d';
+    window.lastMapUrl = getMapUrl(query, mapTimespan);
+    window.lastMapGeoJsonUrl = getMapGeoJsonUrl(query, mapTimespan);
+    const mapPh = document.getElementById('gdeltMapPlaceholder');
+    const mapNoResults = document.getElementById('gdeltMapNoResults');
+    if (mapPh) mapPh.style.display = 'none';
+    if (mapNoResults) mapNoResults.style.display = 'none';
+    if (window.updateLeafletMapPoints) window.updateLeafletMapPoints(query, mapTimespan);
+    if (window.updateQueryResultsWindow) window.updateQueryResultsWindow(query, mapTimespan);
+  };
+
+  // Load only Headlines iframe. Called when user clicks the headlines placeholder.
+  window.triggerHeadlinesLoad = function () {
+    const query = buildQuery();
+    if (!query || !query.trim()) return;
+    const headlinesTimespan = window._gdeltTimespanHeadlines || '1d';
+    const headlinesUrl = getHeadlinesUrl(query, headlinesTimespan);
+    window.lastHeadlinesUrl = headlinesUrl;
+    const headlinesPh = document.getElementById('gdeltHeadlinesPlaceholder');
+    if (headlinesPh) headlinesPh.style.display = 'none';
+    if (window.setIframeWithLoader) window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
+    checkHeadlinesNoResults(query, headlinesTimespan);
+  };
+
+  // Load only Sentiment iframe. Called when user clicks the sentiment placeholder.
+  window.triggerSentimentLoad = function () {
+    const query = buildQuery();
+    if (!query || !query.trim()) return;
+    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
+    const sentimentUrl = getSentimentUrl(query, sentimentTimespan);
+    window.lastSentimentUrl = sentimentUrl;
+    const sentimentPh = document.getElementById('gdeltSentimentPlaceholder');
+    if (sentimentPh) sentimentPh.style.display = 'none';
+    if (window.setIframeWithLoader) window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', sentimentUrl);
+    checkSentimentNoResults(query, sentimentTimespan);
+  };
+
   function updateGdeltIframes() {
     const query = buildQuery();
     const mapTimespan = window._gdeltTimespanMap || '1d';
@@ -428,7 +464,17 @@ export function setupGdeltQuery() {
     if (window.setIframeWithLoader) {
       window.setIframeWithLoader('gdeltMap', 'gdeltMapLoader', mapUrl);
       window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
-      window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', sentimentUrl);
+      // Stagger sentiment iframe by 5.5s: headlines and sentiment hit the same
+      // /api/v2/doc/doc endpoint; firing both simultaneously trips GDELT's
+      // "one request per 5 seconds" rate limit.
+      if (_pendingSentimentTimer) clearTimeout(_pendingSentimentTimer);
+      const _capturedSentimentUrl = sentimentUrl;
+      _pendingSentimentTimer = setTimeout(() => {
+        if (window.setIframeWithLoader) {
+          window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', _capturedSentimentUrl);
+        }
+        _pendingSentimentTimer = null;
+      }, 5500);
     }
     checkHeadlinesNoResults(query, headlinesTimespan);
     checkSentimentNoResults(query, sentimentTimespan);

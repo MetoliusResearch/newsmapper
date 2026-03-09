@@ -33,15 +33,12 @@ export function setupIframes() {
       const queryBox = document.getElementById('gdeltMapQuery');
       const query = queryBox ? queryBox.value : 'petroleum AND lng';
       const timespan = window._gdeltTimespanMap || '1d';
-      const geojsonUrl = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&timespan=${timespan}&format=geojson`;
       document.querySelectorAll('.embed-popup').forEach((el) => el.remove());
       const popup = document.createElement('div');
       popup.className = 'embed-popup';
       popup.innerHTML = `
                 <div style="font-size:0.95em;margin-bottom:0.5em;">Embed code for map (iframe):</div>
                 <textarea readonly style="width:420px;height:90px;font-size:0.97em;">${`<iframe src=\"${url}\" scrolling=\"no\" width=\"100%\" frameborder=\"0\" height=\"500\"></iframe>`}</textarea>
-                <div style="margin:0.7em 0 0.3em 0;font-size:0.97em;color:#0c1b50;">GeoJSON URL for this map query:</div>
-                <input readonly style="width:420px;font-size:0.97em;" value="${geojsonUrl}">
                 <div style="text-align:right;margin-top:0.5em;">
                     <button style="padding:0.2em 1em;font-size:1em;" onclick="this.parentNode.parentNode.remove()">Close</button>
                 </div>
@@ -133,35 +130,21 @@ export function setupIframes() {
   };
   
   window.downloadGeoJSON = function() {
-    const url = window.lastMapGeoJsonUrl;
-    if (!url) {
-        alert('No map data available to download.');
+    const geojson = window.lastComputedMapGeoJson;
+    if (!geojson || !geojson.features || geojson.features.length === 0) {
+        alert('No map data available. Load the News Map first.');
         return;
     }
-    
-    const button = document.activeElement;
-    const originalText = button ? button.innerHTML : '';
-    if (button) button.innerHTML = '⏳';
-
-    fetch(url)
-        .then(resp => resp.blob())
-        .then(blob => {
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            a.download = 'gdelt_extractive_industries_map.geojson';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(blobUrl);
-            if (button) button.innerHTML = originalText;
-        })
-        .catch(err => {
-            console.error('Download failed', err);
-            alert('Download failed. Opening raw data in new tab instead.');
-            window.open(url, '_blank');
-            if (button) button.innerHTML = originalText;
-        });
+    const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = blobUrl;
+    a.download = 'gdelt_news_map.geojson';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
   };
 
   window.copyAndConfirmLink = function (iframeId) {
@@ -169,14 +152,6 @@ export function setupIframes() {
       if (window.lastMapUrl) {
         window.open(window.lastMapUrl, '_blank', 'noopener');
         return;
-      }
-      // Fallback if lastMapUrl not set yet
-      const queryBox = document.getElementById('gdeltMapQuery');
-      if (queryBox && queryBox.value) {
-         const timespan = window._gdeltTimespanMap || '1d';
-         const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(queryBox.value)}&mode=PointData&timespan=${timespan}`;
-         window.open(url, '_blank', 'noopener');
-         return;
       }
     }
     const iframe = document.getElementById(iframeId);
