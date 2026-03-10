@@ -13,7 +13,7 @@
 <body>
     <div class="top-bar">
       <div style="display: flex; flex-direction: column; margin-bottom: 18px;">
-        <span class="top-bar-title" style="margin-bottom: 4px;">NewsMapper 1.1</span>
+        <span class="top-bar-title" style="margin-bottom: 4px;">NewsMapper 1.3</span>
         <span style="font-size: 1.2rem; font-weight: 300; color: #ddd; font-style: italic;">Extractive industries</span>
       </div>
       <div class="header-right">
@@ -75,7 +75,6 @@
                     <div style="display:flex;align-items:center;margin-bottom:0.5em;gap:0.7em;"><span style="min-width:110px;font-weight:600;">GDELT Query:</span><code id="gdeltQueryResultBox" style="flex:1;min-width:80px;max-width:100%;white-space:pre-wrap;background:#f7f7fa;padding:0.3em 0.5em;border-radius:4px;overflow-x:auto;border:1px solid #bbb;box-shadow:0 1px 2px rgba(34,34,59,0.07);"></code></div>
                     <div style="display:flex;align-items:center;margin-bottom:0.5em;gap:0.7em;"><span style="min-width:110px;font-weight:600;">GeoJSON:</span><code id="geojsonUrlBox" style="flex:1;min-width:80px;max-width:100%;white-space:pre-wrap;background:#f7f7fa;padding:0.3em 0.5em;border-radius:4px;overflow-x:auto;border:1px solid #bbb;box-shadow:0 1px 2px rgba(34,34,59,0.07);"></code></div>
                     <div style="display:flex;align-items:center;margin-bottom:0.5em;gap:0.7em;"><span style="min-width:110px;font-weight:600;">Headlines:</span><code id="headlinesUrlBox" style="flex:1;min-width:80px;max-width:100%;white-space:pre-wrap;background:#f7f7fa;padding:0.3em 0.5em;border-radius:4px;overflow-x:auto;border:1px solid #bbb;box-shadow:0 1px 2px rgba(34,34,59,0.07);"></code></div>
-                    <div style="display:flex;align-items:center;gap:0.7em;"><span style="min-width:110px;font-weight:600;">Timeline:</span><code id="timelineUrlBox" style="flex:1;min-width:80px;max-width:100%;white-space:pre-wrap;background:#f7f7fa;padding:0.3em 0.5em;border-radius:4px;overflow-x:auto;border:1px solid #bbb;box-shadow:0 1px 2px rgba(34,34,59,0.07);"></code></div>
                   </div>
                 </div>
             </div>
@@ -93,7 +92,7 @@
                   <div id="gdeltHeadlinesLoader" class="loader-overlay" style="display:none;position:absolute;left:0;top:0;width:100%;height:100%;z-index:10;align-items:center;justify-content:center;">
                     <div class="loader-spinner"></div>
                   </div>
-                  <iframe id="gdeltHeadlines" width="100%" height="500" title="GDELT Headlines" allowfullscreen src="" tabindex="0"></iframe>
+                  <div id="gdeltHeadlinesList" style="min-height:400px;max-height:500px;overflow-y:auto;"></div>
                   <div id="gdeltHeadlinesPlaceholder" onclick="window.triggerHeadlinesLoad && window.triggerHeadlinesLoad()" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:11;background:#f0f0f0;color:#0c1b50;font-size:1.15em;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;gap:1em;cursor:pointer;" title="Click to load Headlines">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
@@ -105,8 +104,7 @@
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
                     <div style="margin-left:auto; display:flex; gap:0.5em;">
-                        <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltHeadlines')">🔗</button>
-                        <button class="gdelt-embed-btn" title="Embed" onclick="window.copyEmbedCode('gdeltHeadlines', 'Headlines', event)">&lt;&gt;</button>
+                        <button class="gdelt-open-btn" title="Open in GDELT" onclick="window.lastHeadlinesUrl && window.open(window.lastHeadlinesUrl,'_blank','noopener')">&#128279;</button>
                     </div>
                 </div>
             </div>
@@ -142,9 +140,6 @@
                     <div class="map-container"><div id="map"></div></div>
                 </div>
                 <div class="gdelt-result-row" style="display: flex; align-items: center; margin-bottom: 1em;">
-                  <div id="mapTimeWarning" style="display:none; color:#d9534f; font-size:0.9em; font-weight:bold; margin-right:1em;">
-                    Max. timeframe 7 days
-                  </div>
                   <div style="margin-left:auto; display:flex; gap:0.5em;">
                     <button class="gdelt-open-btn" title="Download GeoJSON" onclick="window.downloadGeoJSON()">⬇️</button>
                     <button class="gdelt-open-btn" title="Open" onclick="copyAndConfirmLink('gdeltMap')">🔗</button>
@@ -193,7 +188,6 @@
             Developed using GDELT by Metolius Research &copy; 2025
         </div>
     </div>
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script type="module" src="main.js"></script>
     <script>
       function toggleResultsCollapse() {
@@ -223,8 +217,7 @@
         <ul>
           <li>Use the <b>Query</b> box to select a resource, region, or country, or enter your own custom search terms.</li>
           <li>The <b>News Map</b> visualizes the locations of recent news events matching your query.</li>
-          <li><b>Headlines</b> lists the most recent news articles found for your search.</li>
-          <li>The <b>Sentiment</b> timeline shows how positive or negative the news coverage has been over time.</li>
+          <li><b>Headlines</b> lists the most recent news articles found for your search. Use the time buttons to filter the displayed articles.</li>
           <li>Click the info (<b>i</b>) buttons in each section for more details and tips.</li>
           <li>All data is sourced from <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a>. For advanced users, you can view or modify the underlying GDELT query.</li>
         </ul>
@@ -270,21 +263,8 @@
         <ul>
           <li>This section lists the most recent news headlines found for your query.</li>
           <li>Click a headline to open the full article in a new tab.</li>
-          <li>Use the time buttons (1d, 7d, 1M, 1Y) to change the date range of articles displayed.</li>
-          <li>Only the most recent 100 articles are shown for each time range.</li>
-        </ul>
-      </div>
-    </div>
-    <div id="sentimentInfoOverlay" class="query-info-overlay" style="display:none;"></div>
-    <div id="sentimentInfoPopup" class="query-info-popup" style="display:none;">
-      <button class="query-info-close-x" id="sentimentInfoClose" title="Close">&times;</button>
-      <div class="query-info-header">About Sentiment Timeline</div>
-      <div class="query-info-body">
-        <ul>
-          <li>This chart shows the average tone (sentiment) of news coverage over time for your search.</li>
-          <li>Positive values indicate more positive news, negative values indicate more negative news.</li>
-          <li>Use the time buttons (1Y, 2Y, 5Y) to change the date range of the sentiment analysis.</li>
-          <li>Sentiment is calculated automatically and may not reflect the full nuance of each article.</li>
+          <li>Use the time buttons (1d, 7d, 1m) to filter the displayed articles by date (no extra API call).</li>
+          <li>Only the 250 most recent articles from the past 30 days are fetched.</li>
         </ul>
       </div>
     </div>

@@ -83,8 +83,6 @@ const COUNTRY_CENTROIDS = {
 
 let leafletMap = null;
 let leafletGeoJsonLayer = null;
-let leafletHeatLayer = null;
-let currentMapMode = 'points'; // default to 'points' (Newsmap), not 'heatmap'
 let leafletBaseLayer = null;
 let mapUpdateTimer = null;
 
@@ -142,20 +140,6 @@ function performMapUpdate(query, timespan, cachedArticles) {
       if (leafletGeoJsonLayer) {
         leafletMap.removeLayer(leafletGeoJsonLayer);
       }
-      if (leafletHeatLayer) {
-        leafletMap.removeLayer(leafletHeatLayer);
-      }
-      const heatPoints = (geojson.features || [])
-        .map((f) => {
-          const coords = f.geometry && f.geometry.coordinates;
-          if (!coords || coords.length < 2) return null;
-          const lat = coords[1],
-            lng = coords[0];
-          if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) return null;
-          const intensity = (f.properties && (f.properties.intensity || f.properties.count)) || 1;
-          return [lat, lng, intensity];
-        })
-        .filter(Boolean);
       const counts = (geojson.features || []).map((f) =>
         f.properties && typeof f.properties.count === 'number' ? f.properties.count : 1
       );
@@ -169,9 +153,9 @@ function performMapUpdate(query, timespan, cachedArticles) {
       const RADIUS_ONE = 5;
       const RADIUS_UPPER = 16;
       function getRadiusForCount(count) {
-        if (count === 1) return RADIUS_ONE;
+        if (count <= 1) return RADIUS_ONE;
         if (count >= x) return RADIUS_UPPER;
-        return RADIUS_ONE;
+        return Math.round(RADIUS_ONE + (RADIUS_UPPER - RADIUS_ONE) * Math.sqrt((count - 1) / (x - 1)));
       }
       leafletGeoJsonLayer = L.geoJSON(geojson, {
         filter: (feature) => {
@@ -309,14 +293,6 @@ function performMapUpdate(query, timespan, cachedArticles) {
           });
         }
       });
-      leafletHeatLayer = L.heatLayer(heatPoints, {
-        radius: 12, // keep smaller radius
-        blur: 16,
-        maxZoom: 12,
-        minOpacity: 0.65,
-        gradient: { 0.2: '#ffcccc', 0.4: '#ff8888', 0.7: '#ff3333', 1.0: '#ff2d2d' }
-      });
-
       if (window._leafletPointSizeLegend) {
         leafletMap.removeControl(window._leafletPointSizeLegend);
         window._leafletPointSizeLegend = null;
@@ -372,13 +348,7 @@ function performMapUpdate(query, timespan, cachedArticles) {
       leafletMap.addControl(legendInstance);
       window._leafletPointSizeLegend = legendInstance;
 
-      if (currentMapMode === 'heatmap') {
-        leafletHeatLayer.addTo(leafletMap);
-        console.log('[DEBUG] Added heat layer to map');
-      } else {
-        leafletGeoJsonLayer.addTo(leafletMap);
-        console.log('[DEBUG] Added GeoJSON layer to map');
-      }
+      leafletGeoJsonLayer.addTo(leafletMap);
 
       if (loader) loader.style.display = 'none';
   }
@@ -397,16 +367,61 @@ function performMapUpdate(query, timespan, cachedArticles) {
   }
 }
 
+// Parse GDELT seendate format: YYYYMMDDTHHMMSSZ → Date
+function _parseGdeltDate(seendate) {
+  if (!seendate || seendate.length < 8) return null;
+  const y = seendate.slice(0, 4), mo = seendate.slice(4, 6), d = seendate.slice(6, 8);
+  const h = seendate.length >= 11 ? seendate.slice(9, 11) : '00';
+  const mi = seendate.length >= 13 ? seendate.slice(11, 13) : '00';
+  return new Date(`${y}-${mo}-${d}T${h}:${mi}:00Z`);
+}
+
+function _timespanToDays(timespan) {
+  if (timespan === '1d') return 1;
+  if (timespan === '7d') return 7;
+  if (timespan === '30d' || timespan === '1m') return 30;
+  if (timespan === '365d' || timespan === '1y') return 365;
+  const m = timespan && timespan.match(/^(\d+)d$/i);
+  return m ? parseInt(m[1]) : 30;
+}
+
+// Filter the cached 30d article list to a shorter timespan and re-render — no API call.
+window.filterHeadlinesByTime = function (timespan) {
+  const container = document.getElementById('gdeltHeadlinesList');
+  if (!container) return;
+  const articles = window._allHeadlinesArticles || [];
+  if (!articles.length) return;
+  const cutoff = Date.now() - _timespanToDays(timespan) * 86400000;
+  const filtered = articles.filter(art => {
+    const d = _parseGdeltDate(art.seendate);
+    return d && d.getTime() >= cutoff;
+  });
+  if (!filtered.length) {
+    container.innerHTML = '<div style="padding:2em;text-align:center;color:#888;font-style:italic;">No articles found for this time range.</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(art => {
+    const title = (art.title || 'Untitled')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const url = (art.url || '#').replace(/"/g, '%22');
+    const meta = [art.domain, art.sourcecountry].filter(Boolean).join(' · ');
+    return `<div class="headline-item"><a href="${url}" target="_blank" rel="noopener" class="headline-link">${title}</a>${meta ? `<div class="headline-meta">${meta}</div>` : ''}</div>`;
+  }).join('');
+};
+
+// Store and render the full 30d article set (called once on load; cache used by filterHeadlinesByTime).
+window.renderHeadlinesList = function (articles) {
+  window._allHeadlinesArticles = articles;
+  window.filterHeadlinesByTime(window._gdeltTimespanHeadlines || '30d');
+};
+
 const DEFAULT_MAP_QUERY = 'petroleum OR lng';
 const DEFAULT_HEADLINES_QUERY = 'petroleum OR lng';
-const DEFAULT_SENTIMENT_QUERY = 'petroleum OR lng';
 const DEFAULT_MAP_TIMESPAN = '1d';
-const DEFAULT_HEADLINES_TIMESPAN = '1d';
-const DEFAULT_SENTIMENT_TIMESPAN = '1y';
+const DEFAULT_HEADLINES_TIMESPAN = '30d';
 
 window._gdeltTimespanMap = window._gdeltTimespanMap || DEFAULT_MAP_TIMESPAN;
 window._gdeltTimespanHeadlines = window._gdeltTimespanHeadlines || DEFAULT_HEADLINES_TIMESPAN;
-window._gdeltTimespanSentiment = window._gdeltTimespanSentiment || DEFAULT_SENTIMENT_TIMESPAN;
 
 document.addEventListener('DOMContentLoaded', () => {
   setupDropdowns();
@@ -433,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const gdeltQueryResultBox = document.getElementById('gdeltQueryResultBox');
   const geojsonUrlBox = document.getElementById('geojsonUrlBox');
   const headlinesUrlBox = document.getElementById('headlinesUrlBox');
-  const timelineUrlBox = document.getElementById('timelineUrlBox');
   const resourceInput = document.getElementById('resourceInput');
   if (resourceInput) {
     resourceInput.value = 'Oil';
@@ -458,7 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateQueryResultsWindow(query = defaultQuery, mapTimespan = defaultTimespan) {
     const headlinesTimespan = window._gdeltTimespanHeadlines || mapTimespan;
-    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
 
     if (gdeltQueryResultBox) gdeltQueryResultBox.textContent = query;
     function createResultRow(url) {
@@ -489,14 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
       headlinesUrlBox.appendChild(
         createResultRow(
           `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=50&timespan=${headlinesTimespan}`
-        )
-      );
-    }
-    if (timelineUrlBox) {
-      timelineUrlBox.innerHTML = '';
-      timelineUrlBox.appendChild(
-        createResultRow(
-          `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineVolInfo&timespan=${sentimentTimespan}`
         )
       );
     }
@@ -570,53 +575,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     );
     leafletBaseLayer.addTo(leafletMap);
-    const MapModeControl = L.Control.extend({
-      options: { position: 'topright' },
-      onAdd: function () {
-        const container = L.DomUtil.create(
-          'div',
-          'leaflet-bar leaflet-control leaflet-control-custom'
-        );
-        container.id = 'mapModePanel';
-        container.style.background = '#fff';
-        container.style.padding = '0.3em 0.7em';
-        container.style.fontSize = '1em';
-        container.style.cursor = 'pointer';
-        container.style.boxShadow = '0 2px 8px rgba(34,34,59,0.13)';
-        container.style.borderRadius = '6px';
-        container.style.userSelect = 'none';
-        container.style.display = 'block';
-        function updateColors() {
-          container.querySelector('#mapModeHeatmap').style.color =
-            currentMapMode === 'heatmap' ? '#ff2d2d' : '#888';
-          container.querySelector('#mapModePoints').style.color =
-            currentMapMode === 'points' ? '#0074D9' : '#888';
-        }
-        container.innerHTML = `<b id="mapModeHeatmap" style="color:${currentMapMode === 'heatmap' ? '#ff2d2d' : '#888'};margin-right:0.7em;cursor:pointer;">Heatmap</b> <span style="color:#bbb;">|</span> <b id="mapModePoints" style="color:${currentMapMode === 'points' ? '#0074D9' : '#888'};margin-left:0.7em;cursor:pointer;">Newsmap</b>`;
-        container.onclick = function (e) {
-          if (e.target && e.target.id === 'mapModeHeatmap' && currentMapMode !== 'heatmap') {
-            currentMapMode = 'heatmap';
-            window.updateLeafletMapPoints(
-              (document.getElementById('gdeltMapQuery') || {}).value || 'petroleum AND lng',
-              window._gdeltTimespanMap || '7d'
-            );
-            updateColors();
-          } else if (e.target && e.target.id === 'mapModePoints' && currentMapMode !== 'points') {
-            currentMapMode = 'points';
-            window.updateLeafletMapPoints(
-              (document.getElementById('gdeltMapQuery') || {}).value || 'petroleum AND lng',
-              window._gdeltTimespanMap || '7d'
-            );
-            updateColors();
-          }
-        };
-        setTimeout(updateColors, 0);
-        L.DomEvent.disableClickPropagation(container);
-        return container;
-      }
-    });
-    leafletMap.addControl(new MapModeControl());
-
     setTimeout(() => {
       leafletMap.invalidateSize();
     }, 500);

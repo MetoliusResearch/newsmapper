@@ -299,3 +299,32 @@ body {
   padding: 0 10%;
   margin-top: 2em;
 }
+
+/* Native headlines list (replaces GDELT iframe) */
+#gdeltHeadlinesList {
+  padding: 0.3em 0;
+}
+.headline-item {
+  padding: 0.55em 1em;
+  border-bottom: 1px solid #eee;
+}
+.headline-item:last-child {
+  border-bottom: none;
+}
+.headline-link {
+  color: #0c1b50;
+  text-decoration: none;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.15em;
+  line-height: 1.35;
+  font-size: 0.97em;
+}
+.headline-link:hover {
+  text-decoration: underline;
+  color: #2a52be;
+}
+.headline-meta {
+  font-size: 0.8em;
+  color: #999;
+}

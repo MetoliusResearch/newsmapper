@@ -110,8 +110,7 @@ export function setupGdeltQuery() {
   const customInput = document.getElementById('customInput');
   const queryBox = document.getElementById('gdeltMapQuery');
 
-  // Timer to stagger sentiment iframe load (avoids simultaneous doc-endpoint requests)
-  let _pendingSentimentTimer = null;
+  // (no stagger timer needed — sentiment iframe removed)
 
   window.openQuery = function (inputId) {
     const input = document.getElementById(inputId);
@@ -144,9 +143,6 @@ export function setupGdeltQuery() {
     // Include Google Translate by default
     return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=100&timespan=${timespan}&trans=googtrans#googtrans(auto|en)`;
   }
-  function getSentimentUrl(query, timespan) {
-    return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&timelinesmooth=0&timespan=${timespan}&timezoom=yes&FORMAT=html`;
-  }
   function getHumanReadableQuery(resource, region, country, custom) {
     if (custom && custom.trim() !== '') {
       return custom;
@@ -157,7 +153,7 @@ export function setupGdeltQuery() {
     if (country && country !== '') parts.push(country);
     return parts.length ? parts.join(', ') : 'All News';
   }
-  function updateSectionTitles(query, mapTimespan, headlinesTimespan, sentimentTimespan) {
+  function updateSectionTitles(query, mapTimespan, headlinesTimespan) {
     const resource = resourceInput ? resourceInput.value : '';
     const region = regionInput ? regionInput.value : '';
     const country = countryInput ? countryInput.value.trim() : '';
@@ -170,10 +166,6 @@ export function setupGdeltQuery() {
     const headlinesTitle = document.getElementById('headlinesTitle');
     if (headlinesTitle) {
       headlinesTitle.textContent = `Headlines: ${readable} ${getTimespanLabel(headlinesTimespan)}`;
-    }
-    const sentimentTitle = document.getElementById('sentimentTitle');
-    if (sentimentTitle) {
-      sentimentTitle.textContent = `Sentiment: ${readable} ${getSentimentTimespanLabel(sentimentTimespan)}`;
     }
   }
   function getTimespanLabel(timespan) {
@@ -192,38 +184,18 @@ export function setupGdeltQuery() {
         return timespan ? `(${timespan})` : '';
     }
   }
-  function getSentimentTimespanLabel(timespan) {
-    switch (timespan) {
-      case '1y':
-        return '- past year';
-      case '2y':
-        return '- past 2 years';
-      case '5y':
-        return '- past 5 years';
-      default:
-        return timespan ? `- ${timespan}` : '';
-    }
-  }
   window.setMapTime = function (timespan) {
     window._gdeltTimespanMap = timespan;
     const query = buildQuery();
-    updateSectionTitles(query, timespan, window._gdeltTimespanHeadlines || '1d', window._gdeltTimespanSentiment || '1y');
+    updateSectionTitles(query, timespan, window._gdeltTimespanHeadlines || '30d');
     const mapPh = document.getElementById('gdeltMapPlaceholder');
     if (mapPh) mapPh.style.display = 'flex';
   };
   window.setHeadlinesTime = function (timespan) {
     window._gdeltTimespanHeadlines = timespan;
     const query = buildQuery();
-    updateSectionTitles(query, window._gdeltTimespanMap || '1d', timespan, window._gdeltTimespanSentiment || '1y');
-    const headlinesPh = document.getElementById('gdeltHeadlinesPlaceholder');
-    if (headlinesPh) headlinesPh.style.display = 'flex';
-  };
-  window.setSentimentTime = function (timespan) {
-    window._gdeltTimespanSentiment = timespan;
-    const query = buildQuery();
-    updateSectionTitles(query, window._gdeltTimespanMap || '1d', window._gdeltTimespanHeadlines || '1d', timespan);
-    const sentimentPh = document.getElementById('gdeltSentimentPlaceholder');
-    if (sentimentPh) sentimentPh.style.display = 'flex';
+    updateSectionTitles(query, window._gdeltTimespanMap || '1d', timespan);
+    if (window.filterHeadlinesByTime) window.filterHeadlinesByTime(timespan);
   };
 
   function clearCustomIfNeeded() {
@@ -272,19 +244,9 @@ export function setupGdeltQuery() {
   const queryTime30d = document.getElementById('queryTime30d');
   
   function setQueryTime(timespan) {
-    // Headlines always uses the selected timespan
     window._gdeltTimespanHeadlines = timespan;
-    
-    // Map logic: if 30d is selected, cap it at 7d and show warning
-    const mapWarning = document.getElementById('mapTimeWarning');
-    if (timespan === '30d') {
-      window._gdeltTimespanMap = '7d';
-      if (mapWarning) mapWarning.style.display = 'block';
-    } else {
-      window._gdeltTimespanMap = timespan;
-      if (mapWarning) mapWarning.style.display = 'none';
-    }
-    
+    window._gdeltTimespanMap = timespan;
+
     // Update button states
     [queryTime1d, queryTime7d, queryTime30d].forEach(btn => {
       if (btn) {
@@ -294,8 +256,19 @@ export function setupGdeltQuery() {
         else btn.classList.remove('active');
       }
     });
-    
-    refreshQueryAndResetPlaceholders();
+
+    // Reset map placeholder (needs re-fetch with new timespan)
+    const mapPh = document.getElementById('gdeltMapPlaceholder');
+    if (mapPh) mapPh.style.display = 'flex';
+    const mapNoResults = document.getElementById('gdeltMapNoResults');
+    if (mapNoResults) mapNoResults.style.display = 'none';
+
+    // Filter cached headlines locally — no API call
+    if (window.filterHeadlinesByTime) window.filterHeadlinesByTime(timespan);
+
+    const query = buildQuery();
+    updateSectionTitles(query, timespan, timespan);
+    if (window.updateQueryResultsWindow) window.updateQueryResultsWindow(query, timespan);
   }
 
   if (queryTime1d) {
@@ -316,72 +289,29 @@ export function setupGdeltQuery() {
       if (countryInput) countryInput.value = '';
       if (customInput) customInput.value = '';
       window._gdeltTimespanMap = '1d';
-      window._gdeltTimespanHeadlines = '1d';
-      window._gdeltTimespanSentiment = '1y';
+      window._gdeltTimespanHeadlines = '30d';
       refreshQueryAndResetPlaceholders();
     });
   }
 
-  function checkHeadlinesNoResults(query, timespan) {
-    const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=1&format=json&timespan=${timespan}`;
-    const noResultsDiv = document.getElementById('gdeltHeadlinesEmptyQuery');
-    const headlinesIframe = document.getElementById('gdeltHeadlines');
-    if (!noResultsDiv || !headlinesIframe) return;
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.articles || data.articles.length === 0) {
-          noResultsDiv.textContent =
-            'No results found, try increasing the time period or change the query';
-          noResultsDiv.style.display = 'flex';
-          headlinesIframe.style.visibility = 'hidden';
-        } else {
-          noResultsDiv.style.display = 'none';
-          headlinesIframe.style.visibility = 'visible';
-        }
-      })
-      .catch(() => {
-        noResultsDiv.textContent =
-          'No results found, try increasing the time period or change the query';
-        noResultsDiv.style.display = 'flex';
-        headlinesIframe.style.visibility = 'hidden';
-      });
-  }
-  function checkSentimentNoResults(query, timespan) {
-    const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=TimelineTone&format=json&timespan=${timespan}`;
-    const noResultsDiv = document.getElementById('gdeltSentimentNoResults');
-    if (!noResultsDiv) return;
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.timeline || !data.timeline.length) {
-          noResultsDiv.style.display = 'block';
-        } else {
-          noResultsDiv.style.display = 'none';
-        }
-      })
-      .catch(() => {
-        noResultsDiv.style.display = 'none';
-      });
-  }
-
   // Updates query text + section titles and re-shows placeholders.
-  // Called on every input change. Does NOT fire any API requests.
+  // Called on every input/query change. Does NOT fire any API requests.
   function refreshQueryAndResetPlaceholders() {
     const query = buildQuery();
     const mapTimespan = window._gdeltTimespanMap || '1d';
-    const headlinesTimespan = window._gdeltTimespanHeadlines || '1d';
-    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
-    updateSectionTitles(query, mapTimespan, headlinesTimespan, sentimentTimespan);
+    const headlinesTimespan = window._gdeltTimespanHeadlines || '30d';
+    updateSectionTitles(query, mapTimespan, headlinesTimespan);
     const mapPh = document.getElementById('gdeltMapPlaceholder');
     const headlinesPh = document.getElementById('gdeltHeadlinesPlaceholder');
-    const sentimentPh = document.getElementById('gdeltSentimentPlaceholder');
     const mapNoResults = document.getElementById('gdeltMapNoResults');
+    const hlList = document.getElementById('gdeltHeadlinesList');
     if (mapPh) mapPh.style.display = 'flex';
     if (headlinesPh) headlinesPh.style.display = 'flex';
-    if (sentimentPh) sentimentPh.style.display = 'flex';
     if (mapNoResults) mapNoResults.style.display = 'none';
-    if (_pendingSentimentTimer) { clearTimeout(_pendingSentimentTimer); _pendingSentimentTimer = null; }
+    if (hlList) hlList.innerHTML = '';
+    // Invalidate headline cache since query changed
+    window._allHeadlinesArticles = null;
+    window._cachedArticlesKey = null;
     if (window.updateQueryResultsWindow) window.updateQueryResultsWindow(query, mapTimespan);
   }
 
@@ -403,106 +333,36 @@ export function setupGdeltQuery() {
     if (window.updateQueryResultsWindow) window.updateQueryResultsWindow(query, mapTimespan);
   };
 
-  // Load only Headlines iframe. Called when user clicks the headlines placeholder.
-  // Also schedules a delayed JSON pre-fetch (6s after iframe request) to cache articles
-  // for the map, so triggerMapLoad can reuse them without a second API call.
+  // Fetch 30d of articles once; render as native HTML list; cache data for map reuse.
   window.triggerHeadlinesLoad = function () {
     const query = buildQuery();
     if (!query || !query.trim()) return;
-    const headlinesTimespan = window._gdeltTimespanHeadlines || '1d';
-    const headlinesUrl = getHeadlinesUrl(query, headlinesTimespan);
-    window.lastHeadlinesUrl = headlinesUrl;
+    const FETCH_TIMESPAN = '30d';
+    const jsonUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${FETCH_TIMESPAN}&format=json`;
+    // Store raw GDELT URL for the 🔗 button
+    window.lastHeadlinesUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${FETCH_TIMESPAN}&trans=googtrans#googtrans(auto|en)`;
     const headlinesPh = document.getElementById('gdeltHeadlinesPlaceholder');
+    const loader = document.getElementById('gdeltHeadlinesLoader');
     if (headlinesPh) headlinesPh.style.display = 'none';
-    if (window.setIframeWithLoader) window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
-    checkHeadlinesNoResults(query, headlinesTimespan);
-    // Pre-fetch JSON for map cache after 6s (avoids simultaneous doc-endpoint requests)
-    window._cachedArticlesKey = null; // invalidate while pending
-    const cacheKey = query + '|' + headlinesTimespan;
-    const jsonUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=250&timespan=${headlinesTimespan}&format=json`;
-    setTimeout(() => {
-      fetch(jsonUrl)
-        .then(r => r.json())
-        .then(data => {
-          window._cachedArticles = data.articles || [];
-          window._cachedArticlesKey = cacheKey;
-        })
-        .catch(() => {});
-    }, 6000);
+    if (loader) { loader.style.display = 'flex'; loader.style.alignItems = 'center'; loader.style.justifyContent = 'center'; }
+    fetch(jsonUrl)
+      .then(r => r.json())
+      .then(data => {
+        const articles = data.articles || [];
+        if (loader) loader.style.display = 'none';
+        // Cache for map reuse
+        window._allHeadlinesArticles = articles;
+        window._cachedArticles = articles;
+        window._cachedArticlesKey = query + '|' + FETCH_TIMESPAN;
+        if (window.renderHeadlinesList) window.renderHeadlinesList(articles);
+      })
+      .catch(err => {
+        if (loader) loader.style.display = 'none';
+        const container = document.getElementById('gdeltHeadlinesList');
+        if (container) container.innerHTML = '<div style="padding:2em;text-align:center;color:#c00;">Failed to load headlines. Please try again.</div>';
+        console.error('[DEBUG] Headlines fetch error:', err);
+      });
   };
-
-  // Load only Sentiment iframe. Called when user clicks the sentiment placeholder.
-  window.triggerSentimentLoad = function () {
-    const query = buildQuery();
-    if (!query || !query.trim()) return;
-    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
-    const sentimentUrl = getSentimentUrl(query, sentimentTimespan);
-    window.lastSentimentUrl = sentimentUrl;
-    const sentimentPh = document.getElementById('gdeltSentimentPlaceholder');
-    if (sentimentPh) sentimentPh.style.display = 'none';
-    if (window.setIframeWithLoader) window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', sentimentUrl);
-    checkSentimentNoResults(query, sentimentTimespan);
-  };
-
-  function updateGdeltIframes() {
-    const query = buildQuery();
-    const mapTimespan = window._gdeltTimespanMap || '1d';
-    const headlinesTimespan = window._gdeltTimespanHeadlines || '1d';
-    const sentimentTimespan = window._gdeltTimespanSentiment || '1y';
-    const mapUrl = getMapUrl(query, mapTimespan);
-    const mapGeoJsonUrl = getMapGeoJsonUrl(query, mapTimespan);
-    const headlinesUrl = getHeadlinesUrl(query, headlinesTimespan);
-    const sentimentUrl = getSentimentUrl(query, sentimentTimespan);
-    window.lastMapUrl = mapUrl;
-    window.lastMapGeoJsonUrl = mapGeoJsonUrl;
-    window.lastHeadlinesUrl = headlinesUrl;
-    window.lastSentimentUrl = sentimentUrl;
-    updateSectionTitles(query, mapTimespan, headlinesTimespan, sentimentTimespan);
-    
-    // Ensure map warning is correct even if update triggered by other means
-    const mapWarning = document.getElementById('mapTimeWarning');
-    if (mapWarning) {
-        if (headlinesTimespan === '30d') {
-            mapWarning.style.display = 'block';
-        } else {
-            mapWarning.style.display = 'none';
-        }
-    }
-    
-    const mapPlaceholder = document.getElementById('gdeltMapPlaceholder');
-    const headlinesPlaceholder = document.getElementById('gdeltHeadlinesPlaceholder');
-    const sentimentPlaceholder = document.getElementById('gdeltSentimentPlaceholder');
-    
-    if (query && query.trim()) {
-      if (mapPlaceholder) mapPlaceholder.style.display = 'none';
-      if (headlinesPlaceholder) headlinesPlaceholder.style.display = 'none';
-      if (sentimentPlaceholder) sentimentPlaceholder.style.display = 'none';
-    }
-    
-    if (window.setIframeWithLoader) {
-      window.setIframeWithLoader('gdeltMap', 'gdeltMapLoader', mapUrl);
-      window.setIframeWithLoader('gdeltHeadlines', 'gdeltHeadlinesLoader', headlinesUrl);
-      // Stagger sentiment iframe by 5.5s: headlines and sentiment hit the same
-      // /api/v2/doc/doc endpoint; firing both simultaneously trips GDELT's
-      // "one request per 5 seconds" rate limit.
-      if (_pendingSentimentTimer) clearTimeout(_pendingSentimentTimer);
-      const _capturedSentimentUrl = sentimentUrl;
-      _pendingSentimentTimer = setTimeout(() => {
-        if (window.setIframeWithLoader) {
-          window.setIframeWithLoader('gdeltSentiment', 'gdeltSentimentLoader', _capturedSentimentUrl);
-        }
-        _pendingSentimentTimer = null;
-      }, 5500);
-    }
-    checkHeadlinesNoResults(query, headlinesTimespan);
-    checkSentimentNoResults(query, sentimentTimespan);
-    if (window.updateLeafletMapPoints) {
-      window.updateLeafletMapPoints(query, mapTimespan);
-    }
-    if (window.updateQueryResultsWindow) {
-      window.updateQueryResultsWindow(query, mapTimespan);
-    }
-  }
 
   function loadFromURL() {
     const params = new URLSearchParams(window.location.search);
@@ -549,8 +409,7 @@ export function setupGdeltQuery() {
     
     if (resource || region || country || custom || query) {
       setTimeout(() => {
-        console.log('[URL Params] Triggering updateGdeltIframes()');
-        updateGdeltIframes();
+        refreshQueryAndResetPlaceholders();
       }, 100);
     }
   }
