@@ -293,15 +293,23 @@ html, body {
 .qp-select:focus { border-color: var(--blue); outline: 2px solid rgba(42,82,190,.2); }
 #resourceSelect { min-width: 128px; }
 #regionSelect   { min-width: 125px; }
-
-.qp-country-input {
+#countryInput   {
   min-width: 125px;
   width: 125px;
-  cursor: text;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: normal;
+}
+#countryInput::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
 }
 
-.qp-country-input::placeholder {
-  color: #b0b5c8;
+/* Remove datalist-native picker glyph so input matches region select chrome. */
+#countryInput::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
 }
 
 .qp-input {
@@ -356,6 +364,29 @@ html, body {
 }
 .search-btn:hover  { background: var(--blue-hover); }
 .search-btn:active { transform: translateY(1px); }
+
+.search-btn.loading {
+  position: relative;
+}
+
+.search-btn.loading svg {
+  opacity: 0;
+}
+
+.search-btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.45);
+  border-top-color: #fff;
+  animation: nm-spin 0.75s linear infinite;
+}
+
+@keyframes nm-spin {
+  to { transform: rotate(360deg); }
+}
 
 .qp-group-search {
   display: flex;

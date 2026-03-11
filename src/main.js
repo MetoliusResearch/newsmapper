@@ -78,7 +78,7 @@ function renderHybridList(articles) {
   const container = el('hybridHeadlines');
   if (!container) return;
   if (!articles.length) {
-    container.innerHTML = '<p class="hybrid-empty">No articles — run a search first.</p>';
+    container.innerHTML = '<p class="hybrid-empty">Run a search above.</p>';
     return;
   }
   container.innerHTML = buildArticleRowsHtml(articles);
@@ -327,6 +327,15 @@ function setupPullToRefresh() {
   }, { passive: true });
 }
 
+function isPageReload() {
+  const nav = performance.getEntriesByType('navigation');
+  if (Array.isArray(nav) && nav[0] && typeof nav[0].type === 'string') {
+    return nav[0].type === 'reload';
+  }
+  // Legacy fallback.
+  return typeof performance.navigation !== 'undefined' && performance.navigation.type === 1;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   hydrateCountrySuggestions();
   wireEvents(); applyTranslate(true);
@@ -337,6 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   setupPullToRefresh();
   switchView('hybrid');
+  if (isPageReload()) {
+    // Reload acts as a hard reset: clear URL params and skip auto-restores.
+    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+    if (window.location.search) window.history.replaceState({}, '', cleanUrl);
+    window.addEventListener('resize', positionSelBar, { passive: true });
+    return;
+  }
   restoreFromURL();
   window.addEventListener('resize', positionSelBar, { passive: true });
 });

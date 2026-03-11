@@ -266,8 +266,10 @@ function articleRow(art) {
 }
 
 async function translateNewTitles() {
-  const grid = el('hlGrid'); if (!grid) return;
-  const pending = [...grid.querySelectorAll('.art-title[data-orig]')];
+  const pending = [
+    ...collectPendingTitles('hlGrid'),
+    ...collectPendingTitles('hybridHeadlines'),
+  ];
   if (!pending.length) return;
   const unique = [...new Set(pending.map(s => s.dataset.orig).filter(t => !_titleCache.has(t)))];
   const BATCH = 8;
@@ -280,6 +282,12 @@ async function translateNewTitles() {
     const tr = _titleCache.get(s.dataset.orig);
     if (tr) { s.textContent = tr; s.removeAttribute('data-orig'); }
   });
+}
+
+function collectPendingTitles(containerId) {
+  const container = el(containerId);
+  if (!container) return [];
+  return [...container.querySelectorAll('.art-title[data-orig]')];
 }
 
 async function gtxTranslate(text) {
