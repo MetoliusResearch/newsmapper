@@ -453,6 +453,14 @@ html, body {
   letter-spacing: 0.02em;
   min-height: 1em;
 }
+.fetch-status-msg {
+  font-size: 0.75rem;
+  color: #c0392b;
+  min-height: 1.1em;
+  max-width: 280px;
+  text-align: center;
+  line-height: 1.4;
+}
 
 #hlGrid {
   padding: 0.75rem 1rem;

@@ -1,9 +1,9 @@
 import { buildArtListUrl } from './query.js';
 
-const CACHE_TTL    = 10 * 60 * 1000;  // 10 minutes
-const ATTEMPT_TIMEOUTS = [10000, 15000, 20000]; // per-attempt abort ms (3 tries)
+const CACHE_TTL        = 10 * 60 * 1000;
+const ATTEMPT_TIMEOUTS = [8000, 12000, 18000]; // 3 attempts: ~38s total budget
 
-const _articleCache = new Map();  // query → { articles, ts }
+const _articleCache = new Map();
 
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
 let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
@@ -13,20 +13,26 @@ let _filteredArticles = [];
 const _titleCache = new Map();
 
 // ─ progress bar / countdown state ─
-let _progressTimer = null, _countdownTimer = null;
+let _countdownTimer = null;
+let _cancelCtrl = null;   // AbortController for the current in-flight fetch
+
+function setStatus(msg) {
+  const s = document.getElementById('fetchStatusMsg');
+  if (s) s.textContent = msg || '';
+}
 
 function startProgress(totalMs) {
   stopProgress();
-  const bar  = document.getElementById('fetchProgressBar');
-  const lbl  = document.getElementById('fetchCountdown');
+  const bar = document.getElementById('fetchProgressBar');
+  const lbl = document.getElementById('fetchCountdown');
+  setStatus('');
   if (!bar || !lbl) return;
   bar.classList.remove('error');
   bar.style.transition = 'none';
   bar.style.width = '0%';
-  // force reflow so the transition fires
   void bar.offsetWidth;
   bar.style.transition = `width ${totalMs}ms linear`;
-  bar.style.width = '90%';  // never quite reaches 100% until done
+  bar.style.width = '90%';
   let remaining = Math.ceil(totalMs / 1000);
   lbl.textContent = `${remaining}s…`;
   _countdownTimer = setInterval(() => {
@@ -49,8 +55,7 @@ function completeProgress(isError = false) {
 
 function stopProgress() {
   clearInterval(_countdownTimer);
-  clearTimeout(_progressTimer);
-  _countdownTimer = null; _progressTimer = null;
+  _countdownTimer = null;
 }
 
 const el = id => document.getElementById(id);
@@ -65,10 +70,11 @@ function getCached(query) {
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function attemptFetch(url, timeoutMs) {
-  const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+  // fresh controller each attempt
+  _cancelCtrl = new AbortController();
+  const tid = setTimeout(() => _cancelCtrl.abort('timeout'), timeoutMs);
   try {
-    const resp = await fetch(url, { signal: ctrl.signal });
+    const resp = await fetch(url, { signal: _cancelCtrl.signal });
     return resp;
   } finally {
     clearTimeout(tid);
@@ -78,39 +84,51 @@ async function attemptFetch(url, timeoutMs) {
 export async function fetchAndRender(query, timespan) {
   _currentQuery = query; _currentTimespan = timespan; _visibleCount = _pageSize;
 
-  // Serve from cache instantly if fresh
   const cached = getCached(query);
-  if (cached) {
-    _allArticles = cached;
-    renderFiltered();
-    return;
-  }
+  if (cached) { _allArticles = cached; renderFiltered(); return; }
 
   setState('loading');
-  const url = buildArtListUrl(query, '30d', 250);
-  const totalBudgetMs = ATTEMPT_TIMEOUTS.reduce((a, b) => a + b, 0) + 3000; // ~51s total
+  const totalBudgetMs = ATTEMPT_TIMEOUTS.reduce((a, b) => a + b, 0) + (ATTEMPT_TIMEOUTS.length - 1) * 1500;
   startProgress(totalBudgetMs);
 
-  let resp = null, lastErr = null;
+  // Wire up Cancel button
+  const cancelBtn = document.getElementById('fetchCancelBtn');
+  const onCancel = () => { _cancelCtrl?.abort('user'); };
+  cancelBtn?.addEventListener('click', onCancel, { once: true });
+
+  const url = buildArtListUrl(query, '30d', 250);
+  let resp = null, cancelled = false;
+
   for (let i = 0; i < ATTEMPT_TIMEOUTS.length; i++) {
-    // Small inter-attempt pause after the first try
     if (i > 0) {
-      const msgEl = document.getElementById('hlLoadingMsg');
-      if (msgEl) msgEl.textContent = `Retrying (attempt ${i + 1} of ${ATTEMPT_TIMEOUTS.length})…`;
-      await wait(2000);
+      setStatus(`Attempt ${i} timed out. Retrying…`);
+      await wait(1500);
+    } else {
+      setStatus('');
     }
+    const msgEl = document.getElementById('hlLoadingMsg');
+    if (msgEl) msgEl.textContent = i === 0 ? 'Fetching headlines…' : `Retry ${i} of ${ATTEMPT_TIMEOUTS.length - 1}…`;
+
     try {
       resp = await attemptFetch(url, ATTEMPT_TIMEOUTS[i]);
-      break; // success — exit loop
+      setStatus('');
+      break;
     } catch (err) {
-      lastErr = err;
+      if (err?.message === 'user' || _cancelCtrl?.signal?.reason === 'user') {
+        cancelled = true; break;
+      }
+      setStatus(`Attempt ${i + 1} failed: ${err.name === 'AbortError' ? 'timed out' : err.message}`);
       resp = null;
     }
   }
 
+  cancelBtn?.removeEventListener('click', onCancel);
+
+  if (cancelled) { setState('placeholder'); stopProgress(); return; }
+
   if (!resp) {
     completeProgress(true);
-    setState('error', 'Request timed out after 3 attempts. Please try again.');
+    setState('error', 'All 3 attempts timed out. Check your connection and try again.');
     return;
   }
 
