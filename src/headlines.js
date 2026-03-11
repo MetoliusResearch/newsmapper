@@ -1,10 +1,9 @@
 import { buildArtListUrl } from './query.js';
 
-const CACHE_TTL = 10 * 60 * 1000;       // 10 minutes
-const FETCH_DELAY = 5000;                 // 5s pre-flight pause before hitting the API
-const FETCH_TIMEOUT = 20000;              // 20s abort timeout for the actual network call
+const CACHE_TTL    = 10 * 60 * 1000;  // 10 minutes
+const ATTEMPT_TIMEOUTS = [10000, 15000, 20000]; // per-attempt abort ms (3 tries)
 
-const _articleCache = new Map();          // query → { articles, ts }
+const _articleCache = new Map();  // query → { articles, ts }
 
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
 let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
@@ -12,6 +11,47 @@ let _translateEnabled = true;
 let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null, _onRenderCallback = null;
 let _filteredArticles = [];
 const _titleCache = new Map();
+
+// ─ progress bar / countdown state ─
+let _progressTimer = null, _countdownTimer = null;
+
+function startProgress(totalMs) {
+  stopProgress();
+  const bar  = document.getElementById('fetchProgressBar');
+  const lbl  = document.getElementById('fetchCountdown');
+  if (!bar || !lbl) return;
+  bar.classList.remove('error');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  // force reflow so the transition fires
+  void bar.offsetWidth;
+  bar.style.transition = `width ${totalMs}ms linear`;
+  bar.style.width = '90%';  // never quite reaches 100% until done
+  let remaining = Math.ceil(totalMs / 1000);
+  lbl.textContent = `${remaining}s…`;
+  _countdownTimer = setInterval(() => {
+    remaining--;
+    lbl.textContent = remaining > 0 ? `${remaining}s…` : '';
+  }, 1000);
+}
+
+function completeProgress(isError = false) {
+  stopProgress();
+  const bar = document.getElementById('fetchProgressBar');
+  const lbl = document.getElementById('fetchCountdown');
+  if (bar) {
+    bar.style.transition = 'width 0.25s ease';
+    bar.style.width = '100%';
+    if (isError) bar.classList.add('error');
+  }
+  if (lbl) lbl.textContent = '';
+}
+
+function stopProgress() {
+  clearInterval(_countdownTimer);
+  clearTimeout(_progressTimer);
+  _countdownTimer = null; _progressTimer = null;
+}
 
 const el = id => document.getElementById(id);
 
@@ -24,9 +64,9 @@ function getCached(query) {
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function fetchWithTimeout(url) {
+async function attemptFetch(url, timeoutMs) {
   const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
+  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const resp = await fetch(url, { signal: ctrl.signal });
     return resp;
@@ -38,7 +78,7 @@ async function fetchWithTimeout(url) {
 export async function fetchAndRender(query, timespan) {
   _currentQuery = query; _currentTimespan = timespan; _visibleCount = _pageSize;
 
-  // Serve from cache instantly if available and fresh
+  // Serve from cache instantly if fresh
   const cached = getCached(query);
   if (cached) {
     _allArticles = cached;
@@ -47,29 +87,44 @@ export async function fetchAndRender(query, timespan) {
   }
 
   setState('loading');
-  // Built-in 5-second delay before touching the API — avoids server timeout on cold starts
-  await wait(FETCH_DELAY);
-
   const url = buildArtListUrl(query, '30d', 250);
-  let resp;
-  try {
-    resp = await fetchWithTimeout(url);
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      // Timed out — retry once (no extra delay, already waited)
-      try { resp = await fetchWithTimeout(url); }
-      catch (err2) { setState('error', 'Request timed out — please try again.'); return; }
-    } else {
-      setState('error', err.message); return;
+  const totalBudgetMs = ATTEMPT_TIMEOUTS.reduce((a, b) => a + b, 0) + 3000; // ~51s total
+  startProgress(totalBudgetMs);
+
+  let resp = null, lastErr = null;
+  for (let i = 0; i < ATTEMPT_TIMEOUTS.length; i++) {
+    // Small inter-attempt pause after the first try
+    if (i > 0) {
+      const msgEl = document.getElementById('hlLoadingMsg');
+      if (msgEl) msgEl.textContent = `Retrying (attempt ${i + 1} of ${ATTEMPT_TIMEOUTS.length})…`;
+      await wait(2000);
+    }
+    try {
+      resp = await attemptFetch(url, ATTEMPT_TIMEOUTS[i]);
+      break; // success — exit loop
+    } catch (err) {
+      lastErr = err;
+      resp = null;
     }
   }
+
+  if (!resp) {
+    completeProgress(true);
+    setState('error', 'Request timed out after 3 attempts. Please try again.');
+    return;
+  }
+
   try {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _allArticles = data.articles || [];
     _articleCache.set(query, { articles: _allArticles, ts: Date.now() });
+    completeProgress(false);
     renderFiltered();
-  } catch (err) { setState('error', err.message); }
+  } catch (err) {
+    completeProgress(true);
+    setState('error', err.message);
+  }
 }
 
 export function filterByTimespan(timespan) {
