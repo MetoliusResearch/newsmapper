@@ -8,8 +8,8 @@
     script-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com;
     style-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' https://*.tile.openstreetmap.org https://server.arcgisonline.com data: https://www.google.com https://translate.googleapis.com https://img.shields.io blob:;
-    connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://translate.googleapis.com https://translate.google.com;
+    img-src 'self' https: data: blob:;
+    connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://translate.googleapis.com https://translate.google.com https://*.tile.openstreetmap.org;
     frame-src https://translate.googleapis.com;
   " />
   <title>NewsMapper 2.0 — Natural Resources</title>
@@ -196,12 +196,9 @@
       </div>
     </div>
 
-    <!-- ── MAP VIEW (placeholder) ────────────────────────── -->
+    <!-- ── MAP VIEW ─────────────────────────────────────────── -->
     <div class="view-panel" id="viewMap" role="region" aria-label="Map view">
-      <div class="coming-soon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"/></svg>
-        <p>Map view — coming in the next sprint</p>
-      </div>
+      <div id="mapContainer"></div>
     </div>
 
   </main>

@@ -3,7 +3,8 @@ import { buildArtListUrl } from './query.js';
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
 let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
 let _lastFetchQuery = '', _translateEnabled = true;
-let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null;
+let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null, _onRenderCallback = null;
+let _filteredArticles = [];
 const _titleCache = new Map();
 
 const el = id => document.getElementById(id);
@@ -64,6 +65,8 @@ export function getSelectedArticles() {
   }));
 }
 export function setSelectionChangeCallback(fn) { _onSelectionChange = fn; }
+export function setOnRenderCallback(fn) { _onRenderCallback = fn; }
+export function getFilteredArticles() { return _filteredArticles; }
 
 document.addEventListener('DOMContentLoaded', () => {
   el('hlGrid')?.addEventListener('click', e => {
@@ -82,11 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderFiltered() {
   const cutoff = timespanToMs(_currentTimespan), now = Date.now();
   let arts = _allArticles.filter(a => { const d = parseDate(a.seendate); return d && (now - d) <= cutoff; });
-  if (!arts.length) { setState('empty'); return; }
+  if (!arts.length) { _filteredArticles = []; setState('empty'); return; }
   arts = arts.slice().sort((a, b) => {
     const da = parseDate(a.seendate) ?? 0, db = parseDate(b.seendate) ?? 0;
     return _sortOrder === 'date-asc' ? da - db : db - da;
   });
+  _filteredArticles = arts;
   setState('results');
   renderGrid(arts.slice(0, _visibleCount));
   const cnt = el('hlCount');
@@ -94,6 +98,7 @@ function renderFiltered() {
   const wrap = el('hlLoadMoreWrap');
   if (wrap) wrap.style.display = _visibleCount < arts.length ? 'flex' : 'none';
   if (_translateEnabled) translateNewTitles();
+  _onRenderCallback?.(_filteredArticles);
 }
 
 function renderGrid(arts) {
@@ -122,7 +127,9 @@ function articleRow(art) {
   const cached  = _titleCache.get(art.title);
   const display = cached ? esc(cached) : title;
   const origAttr = (!isEn && !cached) ? ` data-orig="${title}"` : '';
-  return `<a class="art-row" href="${url}" data-art-url="${url}" data-art-title="${display}" data-art-domain="${domain}" data-art-country="${country}" data-art-date="${date}" target="_blank" rel="noopener noreferrer"><span class="art-check" aria-hidden="true"><input class="art-check-input" type="checkbox" tabindex="-1"></span><div class="art-row-body"><span class="art-title"${origAttr}>${display}</span><span class="art-row-meta">${meta ? `<span class="art-meta">${meta}</span>` : ''}${!isEn ? `<span class="art-lang">${lang}</span>` : ''}<span class="art-date">${date}</span></span></div></a>`;
+  const imgUrl  = art.socialimage ? safeUrl(art.socialimage) : '';
+  const thumb   = imgUrl && imgUrl !== '#' ? `<span class="art-thumb"><img src="${imgUrl}" loading="lazy" alt="" onerror="this.closest('.art-thumb').style.display='none'"></span>` : '';
+  return `<a class="art-row" href="${url}" data-art-url="${url}" data-art-title="${display}" data-art-domain="${domain}" data-art-country="${country}" data-art-date="${date}" target="_blank" rel="noopener noreferrer"><div class="art-row-body"><span class="art-title"${origAttr}>${display}</span><span class="art-row-meta">${meta ? `<span class="art-meta">${meta}</span>` : ''}${!isEn ? `<span class="art-lang">${lang}</span>` : ''}<span class="art-date">${date}</span></span></div>${thumb}<span class="art-check" aria-hidden="true"><input class="art-check-input" type="checkbox" tabindex="-1"></span></a>`;
 }
 
 async function translateNewTitles() {

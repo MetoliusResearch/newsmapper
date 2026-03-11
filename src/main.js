@@ -3,7 +3,9 @@ import {
   fetchAndRender, filterByTimespan, setSortOrder, loadMore, hasCachedData,
   setTranslateEnabled, toggleSelectMode, clearSelection, selectAll,
   getSelectedArticles, setSelectionChangeCallback,
+  getFilteredArticles, setOnRenderCallback,
 } from './headlines.js';
+import { initMap, updateMap } from './mapview.js';
 
 let currentView = 'headlines', currentTimespan = '7d';
 let translateEnabled = true, lastBuiltQuery = '', selectModeOn = false;
@@ -28,6 +30,12 @@ function switchView(view) {
     const on = p.id === `view${view[0].toUpperCase()}${view.slice(1)}`;
     p.classList.toggle('active', on);
   });
+  if (view === 'map') showMap();
+}
+
+function showMap() {
+  initMap('mapContainer');
+  updateMap(getFilteredArticles());
 }
 
 function applyTranslate(enabled) {
@@ -175,5 +183,7 @@ function wireEvents() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  wireEvents(); applyTranslate(true); restoreFromURL();
+  wireEvents(); applyTranslate(true);
+  setOnRenderCallback(articles => { if (currentView === 'map') updateMap(articles); });
+  restoreFromURL();
 });
