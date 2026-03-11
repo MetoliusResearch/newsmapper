@@ -1,17 +1,32 @@
 import { buildArtListUrl } from './query.js';
 
+const CACHE_TTL = 10 * 60 * 1000;       // 10 minutes
+const FETCH_DELAY = 5000;                 // 5s pre-flight pause before hitting the API
+const FETCH_TIMEOUT = 20000;              // 20s abort timeout for the actual network call
+
+const _articleCache = new Map();          // query → { articles, ts }
+
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
 let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
-let _lastFetchQuery = '', _translateEnabled = true;
+let _translateEnabled = true;
 let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null, _onRenderCallback = null;
 let _filteredArticles = [];
 const _titleCache = new Map();
 
 const el = id => document.getElementById(id);
 
-async function fetchWithTimeout(url, timeoutMs = 5000) {
+function getCached(query) {
+  const c = _articleCache.get(query);
+  if (!c) return null;
+  if (Date.now() - c.ts > CACHE_TTL) { _articleCache.delete(query); return null; }
+  return c.articles;
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function fetchWithTimeout(url) {
   const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+  const tid = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
   try {
     const resp = await fetch(url, { signal: ctrl.signal });
     return resp;
@@ -22,16 +37,28 @@ async function fetchWithTimeout(url, timeoutMs = 5000) {
 
 export async function fetchAndRender(query, timespan) {
   _currentQuery = query; _currentTimespan = timespan; _visibleCount = _pageSize;
+
+  // Serve from cache instantly if available and fresh
+  const cached = getCached(query);
+  if (cached) {
+    _allArticles = cached;
+    renderFiltered();
+    return;
+  }
+
   setState('loading');
+  // Built-in 5-second delay before touching the API — avoids server timeout on cold starts
+  await wait(FETCH_DELAY);
+
   const url = buildArtListUrl(query, '30d', 250);
   let resp;
   try {
     resp = await fetchWithTimeout(url);
   } catch (err) {
     if (err.name === 'AbortError') {
-      // Timed out — retry once
+      // Timed out — retry once (no extra delay, already waited)
       try { resp = await fetchWithTimeout(url); }
-      catch (err2) { setState('error', 'Request timed out after two attempts.'); return; }
+      catch (err2) { setState('error', 'Request timed out — please try again.'); return; }
     } else {
       setState('error', err.message); return;
     }
@@ -40,7 +67,7 @@ export async function fetchAndRender(query, timespan) {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _allArticles = data.articles || [];
-    _lastFetchQuery = query;
+    _articleCache.set(query, { articles: _allArticles, ts: Date.now() });
     renderFiltered();
   } catch (err) { setState('error', err.message); }
 }
@@ -52,7 +79,7 @@ export function setSortOrder(order) {
   _sortOrder = order; _visibleCount = _pageSize; renderFiltered();
 }
 export function loadMore() { _visibleCount += _pageSize; renderFiltered(); }
-export function hasCachedData(query) { return _lastFetchQuery === query && _allArticles.length > 0; }
+export function hasCachedData(query) { return getCached(query) !== null; }
 export function setTranslateEnabled(enabled) {
   _translateEnabled = enabled;
   if (enabled && _allArticles.length) renderFiltered();
@@ -117,7 +144,10 @@ function renderFiltered() {
   setState('results');
   renderGrid(arts.slice(0, _visibleCount));
   const cnt = el('hlCount');
-  if (cnt) cnt.textContent = `${arts.length.toLocaleString()} article${arts.length === 1 ? '' : 's'}`;
+  const cacheEntry = _articleCache.get(_currentQuery);
+  const ageMin = cacheEntry ? Math.floor((Date.now() - cacheEntry.ts) / 60000) : null;
+  const cacheLabel = ageMin !== null ? ` · cached ${ageMin === 0 ? '<1' : ageMin}m` : '';
+  if (cnt) cnt.textContent = `${arts.length.toLocaleString()} article${arts.length === 1 ? '' : 's'}${cacheLabel}`;
   const wrap = el('hlLoadMoreWrap');
   if (wrap) wrap.style.display = _visibleCount < arts.length ? 'flex' : 'none';
   if (_translateEnabled) translateNewTitles();
