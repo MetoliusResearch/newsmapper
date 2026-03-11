@@ -157,9 +157,46 @@ html, body {
 /* ─── Query panel ────────────────────────────────────────────────────────────── */
 .query-panel {
   flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  background: var(--navy);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.query-panel .qp-label {
+  color: rgba(255,255,255,.5);
+}
+.query-panel .qp-select {
+  background-color: var(--navy-light);
+  color: #fff;
+  border-color: rgba(255,255,255,.18);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+.query-panel .qp-select:focus {
+  border-color: rgba(255,255,255,.5);
+  outline: 2px solid rgba(255,255,255,.15);
+}
+.query-panel .qp-input {
+  background: var(--navy-light);
+  color: #fff;
+  border-color: rgba(255,255,255,.18);
+}
+.query-panel .qp-input::placeholder { color: rgba(255,255,255,.3); }
+.query-panel .qp-input:focus {
+  border-color: rgba(255,255,255,.5);
+  outline: 2px solid rgba(255,255,255,.15);
+}
+.query-panel .time-btn {
+  border-color: rgba(255,255,255,.18);
+  color: rgba(255,255,255,.65);
+  background: transparent;
+}
+.query-panel .time-btn:hover {
+  border-color: rgba(255,255,255,.45);
+  color: #fff;
+}
+.query-panel .time-btn.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
 }
 
 .query-panel-inner {
@@ -719,14 +756,19 @@ body { top: 0 !important; }
   .query-panel-inner {
     flex-wrap: wrap;
     overflow-x: visible;
-    padding: 0.5rem 0.75rem;
-    gap: 0.4rem;
+    padding: 0.45rem 0.65rem;
+    gap: 0.35rem;
   }
-  .qp-group { flex: 1 1 calc(50% - 0.2rem); }
-  .qp-group-country,
-  .qp-group-time,
-  .qp-group-search { flex: 1 1 100%; }
-  .qp-select, .qp-input { width: 100%; }
+  /* Row 1: Resource + Region + Country — three equal columns */
+  .qp-group          { flex: 1 1 calc(33.33% - 0.24rem); min-width: 0; }
+  .qp-group-country  { flex: 1 1 calc(33.33% - 0.24rem); min-width: 0; }
+  /* Row 2: Timespan stretches, Search stays as icon square */
+  .qp-group-time     { flex: 1 1 auto; }
+  .qp-group-search   { flex: 0 0 auto; align-self: flex-end; }
+  .qp-select, .qp-input { width: 100%; min-width: 0; font-size: 0.78rem; padding-left: 0.45rem; }
   .qp-time-btns { width: 100%; }
-  .search-btn { width: 100%; justify-content: center; }
+  .search-btn { aspect-ratio: 1; width: auto; }
+  /* Shrink label text on mobile */
+  .qp-label { font-size: 0.62rem; }
+  #resourceSelect, #regionSelect { min-width: 0; }
 }

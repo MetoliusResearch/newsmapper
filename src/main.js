@@ -182,8 +182,22 @@ function wireEvents() {
   el('hlRetryBtn')?.addEventListener('click', () => { if (lastBuiltQuery) fetchAndRender(lastBuiltQuery, currentTimespan); });
 }
 
+function setupPullToRefresh() {
+  let startY = 0, mayPull = false;
+  document.addEventListener('touchstart', e => {
+    const grid = el('hlGrid');
+    mayPull = (grid ? grid.scrollTop : 0) === 0;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!mayPull) return;
+    if (e.changedTouches[0].clientY - startY > 90) window.location.reload(true);
+  }, { passive: true });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   wireEvents(); applyTranslate(true);
   setOnRenderCallback(articles => { if (currentView === 'map') updateMap(articles); });
+  setupPullToRefresh();
   restoreFromURL();
 });
