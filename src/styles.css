@@ -157,7 +157,7 @@ html, body {
 /* ─── Query panel ────────────────────────────────────────────────────────────── */
 .query-panel {
   flex-shrink: 0;
-  background: #2e2e2e;
+  background: #4a4a4a;
   border-bottom: 1px solid rgba(255,255,255,.08);
   box-shadow: 0 2px 8px rgba(0,0,0,.3);
 }
@@ -165,7 +165,7 @@ html, body {
   color: rgba(255,255,255,.5);
 }
 .query-panel .qp-select {
-  background-color: #3d3d3d;
+  background-color: #5a5a5a;
   color: #fff;
   border-color: rgba(255,255,255,.18);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -175,7 +175,7 @@ html, body {
   outline: 2px solid rgba(255,255,255,.15);
 }
 .query-panel .qp-input {
-  background: #3d3d3d;
+  background: #5a5a5a;
   color: #fff;
   border-color: rgba(255,255,255,.18);
 }
