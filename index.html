@@ -3,20 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com;
     style-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' https://*.tile.openstreetmap.org https://server.arcgisonline.com data: https://www.google.com https://translate.googleapis.com https://img.shields.io blob:;
-    connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://translate.googleapis.com https://translate.google.com;
+    img-src 'self' https: data: blob:;
+    connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://translate.googleapis.com https://translate.google.com https://*.tile.openstreetmap.org;
     frame-src https://translate.googleapis.com;
   " />
   <title>NewsMapper 2.0 — Natural Resources</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <script type="module" crossorigin src="./assets/index-DXpqRTbb.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CH5IT-vh.css">
+  <script type="module" crossorigin src="./assets/index-CSBJVdwq.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DKt4ueK_.css">
 </head>
 <body>
   <!-- Top navigation bar -->
@@ -121,9 +124,8 @@
 
       <!-- Search button -->
       <div class="qp-group qp-group-search">
-        <button class="search-btn" id="searchBtn" type="button">
+        <button class="search-btn" id="searchBtn" type="button" title="Search" aria-label="Search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          Search
         </button>
       </div>
     </div>
@@ -197,12 +199,9 @@
       </div>
     </div>
 
-    <!-- ── MAP VIEW (placeholder) ────────────────────────── -->
+    <!-- ── MAP VIEW ─────────────────────────────────────────── -->
     <div class="view-panel" id="viewMap" role="region" aria-label="Map view">
-      <div class="coming-soon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"/></svg>
-        <p>Map view — coming in the next sprint</p>
-      </div>
+      <div id="mapContainer"></div>
     </div>
 
   </main>
