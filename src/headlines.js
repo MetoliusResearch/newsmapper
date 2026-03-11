@@ -1,7 +1,8 @@
 import { buildArtListUrl } from './query.js';
 
 const CACHE_TTL        = 10 * 60 * 1000;
-const ATTEMPT_TIMEOUTS = [8000, 12000, 18000];
+const REQUEST_TIMEOUT_MS = 6000;
+const TRANSLATE_TIMEOUT_MS = 2500;
 
 const _articleCache = new Map();
 
@@ -15,6 +16,26 @@ let _filteredArticles = [];
 let _displayArticles = [];
 let _mapArticles = [];
 const _titleCache = new Map();
+let _lastState = 'placeholder';
+let _lastErrorMessage = '';
+
+let _uiText = {
+  placeholderHtml: 'Select a resource and click <strong>Search</strong> to load headlines.',
+  fetchingHeadlines: 'Fetching headlines…',
+  cancel: 'Cancel',
+  emptyState: 'No articles found. Try a different query or longer timespan.',
+  failedToLoadPrefix: 'Failed to load:',
+  tryAgain: 'Try again',
+  loadMore: 'Load more',
+  articleSingular: 'article',
+  articlePlural: 'articles',
+  cached: 'cached',
+  lessThanOne: '<1',
+  minuteShort: 'm',
+  requestTimedOut: 'Headline request timed out. GDELT may be slow or rate-limiting. Please try again.',
+  unableLoadHeadlines: 'Unable to load headlines right now. Please try again.',
+  rateLimited: 'GDELT is rate-limiting requests right now. Wait a moment and retry.',
+};
 
 let _cancelCtrl = null;
 
@@ -51,17 +72,15 @@ export async function fetchAndRender(query, timespan) {
   cancelBtn?.addEventListener('click', onCancel, { once: true });
 
   const url = buildArtListUrl(query, timespan, 250);
-  let resp = null, cancelled = false;
+  let resp = null, cancelled = false, timedOut = false;
 
-  for (let i = 0; i < ATTEMPT_TIMEOUTS.length; i++) {
-    try {
-      resp = await attemptFetch(url, ATTEMPT_TIMEOUTS[i]);
-      break;
-    } catch (err) {
-      if (err?.message === 'user' || _cancelCtrl?.signal?.reason === 'user') {
-        cancelled = true; break;
-      }
-      resp = null;
+  try {
+    resp = await attemptFetch(url, REQUEST_TIMEOUT_MS);
+  } catch (err) {
+    if (err?.message === 'user' || _cancelCtrl?.signal?.reason === 'user') {
+      cancelled = true;
+    } else {
+      timedOut = true;
     }
   }
 
@@ -70,11 +89,16 @@ export async function fetchAndRender(query, timespan) {
   if (cancelled) { setState('placeholder'); return; }
 
   if (!resp) {
-    setState('error', 'Unable to load headlines right now. Please try again.');
+    const msg = timedOut ? _uiText.requestTimedOut : _uiText.unableLoadHeadlines;
+    setState('error', msg);
     return;
   }
 
   try {
+    if (resp.status === 429) {
+      setState('error', _uiText.rateLimited);
+      return;
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _allArticles = data.articles || [];
@@ -98,7 +122,12 @@ export function setTranslateEnabled(enabled) {
   if (enabled && _allArticles.length) renderFiltered();
 }
 export function setTranslateLanguage(language) {
-  _translateLanguage = String(language || 'en').trim().toLowerCase() || 'en';
+  const normalized = String(language || 'en').trim().toLowerCase();
+  if (!normalized) _translateLanguage = 'en';
+  else if (normalized === 'sp') _translateLanguage = 'es';
+  else if (normalized === 'zh-cn') _translateLanguage = 'zh-CN';
+  else if (normalized === 'ch' || normalized === 'cn' || normalized === 'zh') _translateLanguage = 'zh-CN';
+  else _translateLanguage = normalized;
   if (_allArticles.length) renderFiltered();
 }
 export function toggleSelectMode(on) {
@@ -144,6 +173,12 @@ export function getSelectedArticles() {
 export function setSelectionChangeCallback(fn) { _onSelectionChange = fn; }
 export function setOnRenderCallback(fn) { _onRenderCallback = fn; }
 export function setOnTranslateCallback(fn) { _onTranslateCallback = fn; }
+export function setUiStrings(uiText = {}) {
+  _uiText = { ..._uiText, ...uiText };
+  syncStaticUiText();
+  if (_allArticles.length) renderFiltered();
+  else setState(_lastState, _lastErrorMessage);
+}
 export function getFilteredArticles() { return _filteredArticles; }
 export function getDisplayArticles() { return _displayArticles; }
 export function getMapArticles() { return _mapArticles; }
@@ -214,15 +249,16 @@ async function renderFiltered() {
   setState('results');
   renderGrid(_displayArticles.slice(0, _visibleCount));
   const cnt = el('hlCount');
-  const cacheEntry = _articleCache.get(_currentQuery);
+  const cacheEntry = _articleCache.get(_currentQuery + '|' + _currentTimespan);
   const ageMin = cacheEntry ? Math.floor((Date.now() - cacheEntry.ts) / 60000) : null;
-  const cacheLabel = ageMin !== null ? ` · cached ${ageMin === 0 ? '<1' : ageMin}m` : '';
+  const articleWord = _displayArticles.length === 1 ? _uiText.articleSingular : _uiText.articlePlural;
+  const cacheLabel = ageMin !== null ? ` · ${_uiText.cached} ${ageMin === 0 ? _uiText.lessThanOne : ageMin}${_uiText.minuteShort}` : '';
   const countryLabel = _countryFilterLabel ? ` · ${_countryFilterLabel}` : '';
-  if (cnt) cnt.textContent = `${_displayArticles.length.toLocaleString()} article${_displayArticles.length === 1 ? '' : 's'}${countryLabel}${cacheLabel}`;
+  if (cnt) cnt.textContent = `${_displayArticles.length.toLocaleString()} ${articleWord}${countryLabel}${cacheLabel}`;
   const wrap = el('hlLoadMoreWrap');
   if (wrap) wrap.style.display = _visibleCount < _displayArticles.length ? 'flex' : 'none';
-  if (_translateEnabled) await translateNewTitles();
   _onRenderCallback?.(_filteredArticles);
+  if (_translateEnabled) void translateNewTitles();
 }
 
 function renderGrid(arts) {
@@ -278,20 +314,24 @@ async function translateNewTitles() {
   if (!pending.length) return;
   const unique = [...new Set(pending.map(s => s.dataset.orig).filter(t => !_titleCache.has(titleCacheKey(t))))];
   const BATCH = 8;
-  if (unique.length) _onTranslateCallback?.('start');
-  for (let i = 0; i < unique.length; i += BATCH) {
-    await Promise.all(unique.slice(i, i + BATCH).map(async t => {
-      try {
-        const r = await gtxTranslate(t, _translateLanguage);
-        if (r) _titleCache.set(titleCacheKey(t), r);
-      } catch {}
-    }));
+  const translationStarted = unique.length > 0;
+  if (translationStarted) _onTranslateCallback?.('start');
+  try {
+    for (let i = 0; i < unique.length; i += BATCH) {
+      await Promise.all(unique.slice(i, i + BATCH).map(async t => {
+        try {
+          const r = await gtxTranslate(t, _translateLanguage);
+          if (r) _titleCache.set(titleCacheKey(t), r);
+        } catch {}
+      }));
+    }
+    pending.forEach(s => {
+      const tr = _titleCache.get(titleCacheKey(s.dataset.orig));
+      if (tr) { s.textContent = tr; s.removeAttribute('data-orig'); }
+    });
+  } finally {
+    if (translationStarted) _onTranslateCallback?.('end');
   }
-  pending.forEach(s => {
-    const tr = _titleCache.get(titleCacheKey(s.dataset.orig));
-    if (tr) { s.textContent = tr; s.removeAttribute('data-orig'); }
-  });
-  _onTranslateCallback?.('end');
 }
 
 function collectPendingTitles(containerId) {
@@ -301,10 +341,16 @@ function collectPendingTitles(containerId) {
 }
 
 async function gtxTranslate(text, targetLanguage = 'en') {
-  const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(text)}`);
-  if (!r.ok) return null;
-  const j = await r.json();
-  return Array.isArray(j?.[0]) ? j[0].map(s => s[0] || '').join('') : null;
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort('timeout'), TRANSLATE_TIMEOUT_MS);
+  try {
+    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(text)}`, { signal: ctrl.signal });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j?.[0]) ? j[0].map(s => s[0] || '').join('') : null;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 function shouldTranslateTitle(sourceLanguage) {
@@ -318,6 +364,9 @@ function titleCacheKey(title) {
 }
 
 function setState(state, msg = '') {
+  _lastState = state;
+  _lastErrorMessage = state === 'error' ? msg : '';
+  syncStaticUiText();
   ['hlStatePlaceholder','hlStateLoading','hlStateEmpty','hlStateError'].forEach(id => {
     const n = el(id); if (n) n.style.display = 'none';
   });
@@ -327,7 +376,7 @@ function setState(state, msg = '') {
   if (state === 'results') {
     if (grid) grid.style.display = '';
   } else if (state === 'error') {
-    const em = el('hlStateErrorMsg'); if (em) em.textContent = `Failed to load: ${msg}`;
+    const em = el('hlStateErrorMsg'); if (em) em.textContent = `${_uiText.failedToLoadPrefix} ${msg}`;
     const ee = el('hlStateError'); if (ee) ee.style.display = 'flex';
     if (cnt) cnt.textContent = '';
   } else {
@@ -335,6 +384,21 @@ function setState(state, msg = '') {
     const p = map[state] && el(map[state]); if (p) p.style.display = 'flex';
     if (cnt) cnt.textContent = '';
   }
+}
+
+function syncStaticUiText() {
+  const placeholder = el('hlStatePlaceholder')?.querySelector('.hl-state-msg');
+  if (placeholder) placeholder.innerHTML = _uiText.placeholderHtml;
+  const loading = el('hlLoadingMsg');
+  if (loading) loading.textContent = _uiText.fetchingHeadlines;
+  const cancel = el('fetchCancelBtn');
+  if (cancel) cancel.textContent = _uiText.cancel;
+  const empty = el('hlStateEmpty')?.querySelector('.hl-state-msg');
+  if (empty) empty.textContent = _uiText.emptyState;
+  const retry = el('hlRetryBtn');
+  if (retry) retry.textContent = _uiText.tryAgain;
+  const loadMoreBtn = el('hlLoadMoreBtn');
+  if (loadMoreBtn) loadMoreBtn.textContent = _uiText.loadMore;
 }
 
 function parseDate(s) {

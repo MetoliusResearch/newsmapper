@@ -3,11 +3,11 @@ import {
   fetchAndRender, filterByTimespan, setSortOrder, loadMore, hasCachedData,
   setTranslateEnabled, setTranslateLanguage, toggleSelectMode, clearSelection, selectAll,
   getSelectedArticles, setSelectionChangeCallback,
-  setOnRenderCallback, setOnTranslateCallback,
+  setOnRenderCallback, setOnTranslateCallback, setUiStrings,
   setCountryFilter, getCountryFilter,
   getDisplayArticles, buildArticleRowsHtml, getMapArticles,
 } from './headlines.js';
-import { initHybridMap, updateHybridMap, setMapCountryClickHandler } from './mapview.js';
+import { initHybridMap, updateHybridMap, setMapCountryClickHandler, setMapUiStrings } from './mapview.js';
 import { COUNTRY_COORDS } from './countries.js';
 
 let currentView = 'hybrid', currentTimespan = '7d';
@@ -19,6 +19,347 @@ let _hybridStatusActive = false;
 
 const el  = id  => document.getElementById(id);
 const qsa = sel => [...document.querySelectorAll(sel)];
+
+function normalizeTranslateLanguage(language) {
+  const normalized = String(language || 'en').trim().toLowerCase();
+  if (!normalized) return 'en';
+  if (normalized === 'sp') return 'es';
+  if (normalized === 'pt-br') return 'pt';
+  if (normalized === 'zh-cn') return 'zh-CN';
+  if (normalized === 'ch' || normalized === 'cn' || normalized === 'zh') return 'zh-CN';
+  return normalized;
+}
+
+let currentUiLanguage = 'en';
+
+const LANGUAGE_OPTION_LABELS = {
+  en: 'EN 中',
+  es: 'SP',
+  pt: 'PT',
+  ru: 'RU',
+  'zh-CN': '中',
+};
+
+const UI_TEXT = {
+  en: {
+    pageTitle: 'NewsMapper 2.0 — Natural Resources',
+    htmlLang: 'en',
+    translateSelectorLabel: 'Translate UI and headlines',
+    topbarSub: 'Natural Resources Intelligence',
+    topbarPowered: 'powered by GDELT',
+    headlinesRegion: 'Headlines',
+    hybridRegion: 'Hybrid map + headlines',
+    searchQuery: 'Search query',
+    placeholderHtml: 'Select a resource and click <strong>Search</strong> to load headlines.',
+    fetchingHeadlines: 'Fetching headlines…',
+    cancel: 'Cancel',
+    emptyState: 'No articles found. Try a different query or longer timespan.',
+    tryAgain: 'Try again',
+    loadMore: 'Load more',
+    hideMap: 'Hide map',
+    showMap: 'Show map',
+    defaultBadge: '★ default',
+    defaultBadgeAria: 'Loaded from saved default',
+    setDefault: 'Set default',
+    saveCurrentQuery: 'Save current query as default',
+    sortHeadlinesBy: 'Sort headlines by',
+    sortHybridHeadlinesBy: 'Sort hybrid headlines by',
+    newestFirst: 'Newest first',
+    oldestFirst: 'Oldest first',
+    select: 'Select',
+    selectArticles: 'Select articles to share or export',
+    resource: 'Resource',
+    selectResource: 'Select resource',
+    region: 'Region',
+    selectRegion: 'Select region',
+    country: 'Country',
+    selectCountry: 'Select country',
+    countrySuggestions: 'Country suggestions',
+    countryPlaceholder: '— Type Name —',
+    timespan: 'Timespan',
+    selectTimespan: 'Select timespan',
+    search: 'Search',
+    fullReset: 'Full reset',
+    selectionActions: 'Selection actions',
+    selectAll: 'Select all',
+    selectAllVisible: 'Select all visible articles',
+    share: 'Share',
+    shareSelected: 'Share selected via native share or clipboard',
+    export: 'Export',
+    exportSelected: 'Download selected as HTML file',
+    deselectAll: 'Deselect all',
+    downloading: 'Downloading…',
+    translating: 'Translating…',
+    runSearchAbove: 'Run a search above.',
+    filteredTo: 'Filtered to {country}',
+    countryFilterCleared: 'Country filter cleared',
+    nothingToSave: 'Nothing to save — run a search first.',
+    defaultSaved: 'Default saved',
+    storageUnavailable: 'Could not save — storage unavailable.',
+    missingQuery: 'Please select a resource or enter a keyword.',
+    selectedCount: '{count} selected',
+    copiedToClipboard: 'Copied to clipboard',
+    shareFailed: 'Could not share — try Export instead',
+    articleSingular: 'article',
+    articlePlural: 'articles',
+    more: 'more',
+    and: 'AND',
+    or: 'OR',
+    blankSelect: '— Select —',
+    groupFossilFuels: 'Fossil Fuels',
+    oil: 'Oil',
+    lng: 'LNG / Natural Gas',
+    coal: 'Coal',
+    fossilFuelsBroad: 'Fossil Fuels',
+    groupMining: 'Mining',
+    miningBroad: 'Mining (broad)',
+    gold: 'Gold',
+    silver: 'Silver',
+    copper: 'Copper',
+    lithium: 'Lithium',
+    cobalt: 'Cobalt',
+    nickel: 'Nickel',
+    ironOre: 'Iron Ore',
+    uranium: 'Uranium',
+    criticalMinerals: 'Critical Minerals',
+    groupAgriculture: 'Agriculture / Land',
+    palmOil: 'Palm Oil',
+    soy: 'Soy',
+    cattleBeef: 'Cattle / Beef',
+    loggingTimber: 'Logging / Timber',
+    africa: 'Africa',
+    asia: 'Asia',
+    europe: 'Europe',
+    latinAmerica: 'Latin America',
+    amazon: 'Amazon',
+    middleEast: 'Middle East',
+    northAmerica: 'North America',
+    pacific: 'Pacific',
+  },
+  es: {
+    pageTitle: 'NewsMapper 2.0 — Recursos Naturales', htmlLang: 'es', translateSelectorLabel: 'Traducir interfaz y titulares', topbarSub: 'Inteligencia de Recursos Naturales', topbarPowered: 'impulsado por GDELT', headlinesRegion: 'Titulares', hybridRegion: 'Mapa híbrido + titulares', searchQuery: 'Consulta de búsqueda', placeholderHtml: 'Seleccione un recurso y pulse <strong>Buscar</strong> para cargar titulares.', fetchingHeadlines: 'Cargando titulares…', cancel: 'Cancelar', emptyState: 'No se encontraron artículos. Pruebe otra consulta o un periodo más largo.', tryAgain: 'Intentar de nuevo', loadMore: 'Cargar más', hideMap: 'Ocultar mapa', showMap: 'Mostrar mapa', defaultBadge: '★ predeterminado', defaultBadgeAria: 'Cargado desde el valor predeterminado guardado', setDefault: 'Guardar pred.', saveCurrentQuery: 'Guardar la consulta actual como predeterminada', sortHeadlinesBy: 'Ordenar titulares', sortHybridHeadlinesBy: 'Ordenar titulares híbridos', newestFirst: 'Más recientes primero', oldestFirst: 'Más antiguos primero', select: 'Seleccionar', selectArticles: 'Seleccionar artículos para compartir o exportar', resource: 'Recurso', selectResource: 'Seleccionar recurso', region: 'Región', selectRegion: 'Seleccionar región', country: 'País', selectCountry: 'Seleccionar país', countrySuggestions: 'Sugerencias de países', countryPlaceholder: '— Escriba un nombre —', timespan: 'Periodo', selectTimespan: 'Seleccionar periodo', search: 'Buscar', fullReset: 'Reiniciar', selectionActions: 'Acciones de selección', selectAll: 'Seleccionar todo', selectAllVisible: 'Seleccionar todos los artículos visibles', share: 'Compartir', shareSelected: 'Compartir la selección', export: 'Exportar', exportSelected: 'Descargar la selección como HTML', deselectAll: 'Quitar selección', downloading: 'Descargando…', translating: 'Traduciendo…', runSearchAbove: 'Ejecute una búsqueda arriba.', filteredTo: 'Filtrado a {country}', countryFilterCleared: 'Filtro de país borrado', nothingToSave: 'Nada que guardar: ejecute primero una búsqueda.', defaultSaved: 'Predeterminado guardado', storageUnavailable: 'No se pudo guardar: almacenamiento no disponible.', missingQuery: 'Seleccione un recurso o introduzca una palabra clave.', selectedCount: '{count} seleccionados', copiedToClipboard: 'Copiado al portapapeles', shareFailed: 'No se pudo compartir; pruebe Exportar', articleSingular: 'artículo', articlePlural: 'artículos', more: 'más', and: 'Y', or: 'O', blankSelect: '— Seleccionar —', groupFossilFuels: 'Combustibles fósiles', oil: 'Petróleo', lng: 'GNL / Gas natural', coal: 'Carbón', fossilFuelsBroad: 'Combustibles fósiles', groupMining: 'Minería', miningBroad: 'Minería (general)', gold: 'Oro', silver: 'Plata', copper: 'Cobre', lithium: 'Litio', cobalt: 'Cobalto', nickel: 'Níquel', ironOre: 'Mineral de hierro', uranium: 'Uranio', criticalMinerals: 'Minerales críticos', groupAgriculture: 'Agricultura / Tierra', palmOil: 'Aceite de palma', soy: 'Soja', cattleBeef: 'Ganado / Carne', loggingTimber: 'Tala / Madera', africa: 'África', asia: 'Asia', europe: 'Europa', latinAmerica: 'América Latina', amazon: 'Amazonia', middleEast: 'Oriente Medio', northAmerica: 'América del Norte', pacific: 'Pacífico'
+  },
+  pt: {
+    pageTitle: 'NewsMapper 2.0 — Recursos Naturais', htmlLang: 'pt', translateSelectorLabel: 'Traduzir interface e manchetes', topbarSub: 'Inteligência sobre Recursos Naturais', topbarPowered: 'alimentado por GDELT', headlinesRegion: 'Manchetes', hybridRegion: 'Mapa híbrido + manchetes', searchQuery: 'Consulta de busca', placeholderHtml: 'Selecione um recurso e clique em <strong>Buscar</strong> para carregar manchetes.', fetchingHeadlines: 'Carregando manchetes…', cancel: 'Cancelar', emptyState: 'Nenhum artigo encontrado. Tente outra consulta ou um período maior.', tryAgain: 'Tentar novamente', loadMore: 'Carregar mais', hideMap: 'Ocultar mapa', showMap: 'Mostrar mapa', defaultBadge: '★ padrão', defaultBadgeAria: 'Carregado do padrão salvo', setDefault: 'Salvar padrão', saveCurrentQuery: 'Salvar consulta atual como padrão', sortHeadlinesBy: 'Ordenar manchetes', sortHybridHeadlinesBy: 'Ordenar manchetes híbridas', newestFirst: 'Mais recentes primeiro', oldestFirst: 'Mais antigas primeiro', select: 'Selecionar', selectArticles: 'Selecionar artigos para compartilhar ou exportar', resource: 'Recurso', selectResource: 'Selecionar recurso', region: 'Região', selectRegion: 'Selecionar região', country: 'País', selectCountry: 'Selecionar país', countrySuggestions: 'Sugestões de países', countryPlaceholder: '— Digite um nome —', timespan: 'Período', selectTimespan: 'Selecionar período', search: 'Buscar', fullReset: 'Redefinir', selectionActions: 'Ações de seleção', selectAll: 'Selecionar tudo', selectAllVisible: 'Selecionar todos os artigos visíveis', share: 'Compartilhar', shareSelected: 'Compartilhar seleção', export: 'Exportar', exportSelected: 'Baixar seleção como HTML', deselectAll: 'Limpar seleção', downloading: 'Baixando…', translating: 'Traduzindo…', runSearchAbove: 'Faça uma busca acima.', filteredTo: 'Filtrado para {country}', countryFilterCleared: 'Filtro de país limpo', nothingToSave: 'Nada para salvar; execute uma busca primeiro.', defaultSaved: 'Padrão salvo', storageUnavailable: 'Não foi possível salvar; armazenamento indisponível.', missingQuery: 'Selecione um recurso ou insira uma palavra-chave.', selectedCount: '{count} selecionados', copiedToClipboard: 'Copiado para a área de transferência', shareFailed: 'Não foi possível compartilhar; tente Exportar', articleSingular: 'artigo', articlePlural: 'artigos', more: 'mais', and: 'E', or: 'OU', blankSelect: '— Selecionar —', groupFossilFuels: 'Combustíveis fósseis', oil: 'Petróleo', lng: 'GNL / Gás natural', coal: 'Carvão', fossilFuelsBroad: 'Combustíveis fósseis', groupMining: 'Mineração', miningBroad: 'Mineração (geral)', gold: 'Ouro', silver: 'Prata', copper: 'Cobre', lithium: 'Lítio', cobalt: 'Cobalto', nickel: 'Níquel', ironOre: 'Minério de ferro', uranium: 'Urânio', criticalMinerals: 'Minerais críticos', groupAgriculture: 'Agricultura / Terra', palmOil: 'Óleo de palma', soy: 'Soja', cattleBeef: 'Gado / Carne bovina', loggingTimber: 'Exploração madeireira', africa: 'África', asia: 'Ásia', europe: 'Europa', latinAmerica: 'América Latina', amazon: 'Amazônia', middleEast: 'Oriente Médio', northAmerica: 'América do Norte', pacific: 'Pacífico'
+  },
+  ru: {
+    pageTitle: 'NewsMapper 2.0 — Природные ресурсы', htmlLang: 'ru', translateSelectorLabel: 'Перевести интерфейс и заголовки', topbarSub: 'Аналитика по природным ресурсам', topbarPowered: 'на базе GDELT', headlinesRegion: 'Заголовки', hybridRegion: 'Гибридная карта и заголовки', searchQuery: 'Поисковый запрос', placeholderHtml: 'Выберите ресурс и нажмите <strong>Поиск</strong>, чтобы загрузить заголовки.', fetchingHeadlines: 'Загрузка заголовков…', cancel: 'Отмена', emptyState: 'Статьи не найдены. Попробуйте другой запрос или больший период.', tryAgain: 'Повторить', loadMore: 'Загрузить ещё', hideMap: 'Скрыть карту', showMap: 'Показать карту', defaultBadge: '★ по умолчанию', defaultBadgeAria: 'Загружено из сохранённого значения по умолчанию', setDefault: 'Сделать осн.', saveCurrentQuery: 'Сохранить текущий запрос по умолчанию', sortHeadlinesBy: 'Сортировать заголовки', sortHybridHeadlinesBy: 'Сортировать гибридные заголовки', newestFirst: 'Сначала новые', oldestFirst: 'Сначала старые', select: 'Выбрать', selectArticles: 'Выбрать статьи для отправки или экспорта', resource: 'Ресурс', selectResource: 'Выбрать ресурс', region: 'Регион', selectRegion: 'Выбрать регион', country: 'Страна', selectCountry: 'Выбрать страну', countrySuggestions: 'Подсказки стран', countryPlaceholder: '— Введите название —', timespan: 'Период', selectTimespan: 'Выбрать период', search: 'Поиск', fullReset: 'Сброс', selectionActions: 'Действия с выбором', selectAll: 'Выбрать всё', selectAllVisible: 'Выбрать все видимые статьи', share: 'Поделиться', shareSelected: 'Поделиться выбранным', export: 'Экспорт', exportSelected: 'Скачать выбранное как HTML', deselectAll: 'Снять выбор', downloading: 'Загрузка…', translating: 'Перевод…', runSearchAbove: 'Выполните поиск выше.', filteredTo: 'Фильтр: {country}', countryFilterCleared: 'Фильтр по стране очищен', nothingToSave: 'Нечего сохранять — сначала выполните поиск.', defaultSaved: 'Значение по умолчанию сохранено', storageUnavailable: 'Не удалось сохранить — хранилище недоступно.', missingQuery: 'Выберите ресурс или введите ключевое слово.', selectedCount: 'Выбрано: {count}', copiedToClipboard: 'Скопировано в буфер обмена', shareFailed: 'Не удалось поделиться — попробуйте экспорт', articleSingular: 'статья', articlePlural: 'статей', more: 'ещё', and: 'И', or: 'ИЛИ', blankSelect: '— Выбрать —', groupFossilFuels: 'Ископаемое топливо', oil: 'Нефть', lng: 'СПГ / Природный газ', coal: 'Уголь', fossilFuelsBroad: 'Ископаемое топливо', groupMining: 'Добыча', miningBroad: 'Добыча (общая)', gold: 'Золото', silver: 'Серебро', copper: 'Медь', lithium: 'Литий', cobalt: 'Кобальт', nickel: 'Никель', ironOre: 'Железная руда', uranium: 'Уран', criticalMinerals: 'Критические минералы', groupAgriculture: 'Сельское хозяйство / Земля', palmOil: 'Пальмовое масло', soy: 'Соя', cattleBeef: 'Скот / Говядина', loggingTimber: 'Лесозаготовка', africa: 'Африка', asia: 'Азия', europe: 'Европа', latinAmerica: 'Латинская Америка', amazon: 'Амазония', middleEast: 'Ближний Восток', northAmerica: 'Северная Америка', pacific: 'Тихий океан'
+  },
+  'zh-CN': {
+    pageTitle: 'NewsMapper 2.0 — 自然资源', htmlLang: 'zh-CN', translateSelectorLabel: '翻译界面和标题', topbarSub: '自然资源情报', topbarPowered: '由 GDELT 提供支持', headlinesRegion: '标题', hybridRegion: '混合地图与标题', searchQuery: '搜索查询', placeholderHtml: '选择一个资源并点击<strong>搜索</strong>以加载标题。', fetchingHeadlines: '正在获取标题…', cancel: '取消', emptyState: '未找到文章。请尝试其他查询或更长时间范围。', tryAgain: '重试', loadMore: '加载更多', hideMap: '隐藏地图', showMap: '显示地图', defaultBadge: '★ 默认', defaultBadgeAria: '已从保存的默认值加载', setDefault: '设为默认', saveCurrentQuery: '将当前查询保存为默认值', sortHeadlinesBy: '标题排序', sortHybridHeadlinesBy: '混合标题排序', newestFirst: '最新优先', oldestFirst: '最早优先', select: '选择', selectArticles: '选择文章以分享或导出', resource: '资源', selectResource: '选择资源', region: '地区', selectRegion: '选择地区', country: '国家', selectCountry: '选择国家', countrySuggestions: '国家建议', countryPlaceholder: '— 输入名称 —', timespan: '时间范围', selectTimespan: '选择时间范围', search: '搜索', fullReset: '完全重置', selectionActions: '选择操作', selectAll: '全选', selectAllVisible: '选择所有可见文章', share: '分享', shareSelected: '分享已选内容', export: '导出', exportSelected: '将已选内容下载为 HTML', deselectAll: '取消全选', downloading: '下载中…', translating: '翻译中…', runSearchAbove: '请先在上方搜索。', filteredTo: '已筛选到 {country}', countryFilterCleared: '国家筛选已清除', nothingToSave: '没有可保存的内容，请先执行搜索。', defaultSaved: '默认值已保存', storageUnavailable: '无法保存，存储不可用。', missingQuery: '请选择资源或输入关键词。', selectedCount: '已选择 {count} 项', copiedToClipboard: '已复制到剪贴板', shareFailed: '无法分享，请尝试导出', articleSingular: '篇文章', articlePlural: '篇文章', more: '更多', and: '且', or: '或', blankSelect: '— 选择 —', groupFossilFuels: '化石燃料', oil: '石油', lng: '液化天然气 / 天然气', coal: '煤炭', fossilFuelsBroad: '化石燃料', groupMining: '采矿', miningBroad: '采矿（广义）', gold: '黄金', silver: '白银', copper: '铜', lithium: '锂', cobalt: '钴', nickel: '镍', ironOre: '铁矿石', uranium: '铀', criticalMinerals: '关键矿产', groupAgriculture: '农业 / 土地', palmOil: '棕榈油', soy: '大豆', cattleBeef: '牛 / 牛肉', loggingTimber: '伐木 / 木材', africa: '非洲', asia: '亚洲', europe: '欧洲', latinAmerica: '拉丁美洲', amazon: '亚马孙', middleEast: '中东', northAmerica: '北美', pacific: '太平洋'
+  },
+};
+
+function getUiText(language = currentUiLanguage) {
+  return UI_TEXT[language] || UI_TEXT.en;
+}
+
+function t(key, vars = {}, language = currentUiLanguage) {
+  const copy = getUiText(language);
+  let text = copy[key] ?? UI_TEXT.en[key] ?? '';
+  return text.replace(/\{(\w+)\}/g, (_, token) => String(vars[token] ?? ''));
+}
+
+function setTextContent(node, text) {
+  if (node) node.textContent = text;
+}
+
+function setInnerHtml(node, html) {
+  if (node) node.innerHTML = html;
+}
+
+function setElementText(id, text) {
+  const node = el(id);
+  if (!node) return;
+  if (!node.querySelector('svg')) {
+    node.textContent = text;
+    return;
+  }
+  const textNodes = [...node.childNodes].filter(child => child.nodeType === Node.TEXT_NODE);
+  if (textNodes.length) {
+    textNodes[textNodes.length - 1].textContent = ` ${text}`;
+    return;
+  }
+  node.append(document.createTextNode(` ${text}`));
+}
+
+function setElementHtml(id, html) {
+  setInnerHtml(el(id), html);
+}
+
+function setElementAttr(id, name, value) {
+  const node = el(id);
+  if (node) node.setAttribute(name, value);
+}
+
+function updateLanguageSelectorLabels() {
+  const select = el('languageSelect');
+  if (!select) return;
+  [...select.options].forEach(option => {
+    option.textContent = LANGUAGE_OPTION_LABELS[option.value] || option.textContent;
+  });
+}
+
+function applySelectOptionLabels() {
+  const resourceSelect = el('resourceSelect');
+  if (resourceSelect) {
+    const groups = resourceSelect.querySelectorAll('optgroup');
+    if (groups[0]) groups[0].label = t('groupFossilFuels');
+    if (groups[1]) groups[1].label = t('groupMining');
+    if (groups[2]) groups[2].label = t('groupAgriculture');
+    const labelByValue = {
+      '': t('blankSelect'),
+      Oil: t('oil'),
+      LNG: t('lng'),
+      Coal: t('coal'),
+      'Fossil Fuels': t('fossilFuelsBroad'),
+      Mining: t('miningBroad'),
+      Gold: t('gold'),
+      Silver: t('silver'),
+      Copper: t('copper'),
+      Lithium: t('lithium'),
+      Cobalt: t('cobalt'),
+      Nickel: t('nickel'),
+      Iron: t('ironOre'),
+      Uranium: t('uranium'),
+      'Critical Minerals': t('criticalMinerals'),
+      'Palm Oil': t('palmOil'),
+      Soy: t('soy'),
+      'Cattle/Beef': t('cattleBeef'),
+      Logging: t('loggingTimber'),
+    };
+    [...resourceSelect.options].forEach(option => {
+      option.textContent = labelByValue[option.value] ?? option.textContent;
+    });
+  }
+
+  const regionSelect = el('regionSelect');
+  if (regionSelect) {
+    const labelByValue = {
+      '': t('blankSelect'),
+      Africa: t('africa'),
+      Asia: t('asia'),
+      Europe: t('europe'),
+      'Latin America': t('latinAmerica'),
+      Amazon: t('amazon'),
+      'Middle East': t('middleEast'),
+      'North America': t('northAmerica'),
+      Pacific: t('pacific'),
+    };
+    [...regionSelect.options].forEach(option => {
+      option.textContent = labelByValue[option.value] ?? option.textContent;
+    });
+  }
+}
+
+function applyUiLanguage(language) {
+  currentUiLanguage = getUiText(normalizeTranslateLanguage(language)).htmlLang === 'zh-CN' ? 'zh-CN' : normalizeTranslateLanguage(language);
+  if (!UI_TEXT[currentUiLanguage]) currentUiLanguage = 'en';
+
+  document.documentElement.lang = getUiText().htmlLang;
+  document.title = t('pageTitle');
+
+  updateLanguageSelectorLabels();
+  const selectorLabel = document.querySelector('label[for="languageSelect"].sr-only');
+  setTextContent(selectorLabel, t('translateSelectorLabel'));
+  setElementAttr('languageSelect', 'aria-label', t('translateSelectorLabel'));
+
+  setTextContent(document.querySelector('.topbar-sub'), t('topbarSub'));
+  setTextContent(document.querySelector('.topbar-powered'), t('topbarPowered'));
+  setElementAttr('viewHeadlines', 'aria-label', t('headlinesRegion'));
+  setElementAttr('viewHybrid', 'aria-label', t('hybridRegion'));
+  setElementAttr('queryPanel', 'aria-label', t('searchQuery'));
+
+  setElementText('mapToggleBtn', t('hideMap'));
+  setElementAttr('mapToggleBtn', 'title', t('hideMap'));
+
+  setElementText('defaultBadge', t('defaultBadge'));
+  setElementAttr('defaultBadge', 'aria-label', t('defaultBadgeAria'));
+  setElementText('setDefaultBtn', t('setDefault'));
+  setElementText('hybridSetDefaultBtn', t('setDefault'));
+  setElementAttr('setDefaultBtn', 'title', t('saveCurrentQuery'));
+  setElementAttr('setDefaultBtn', 'aria-label', t('saveCurrentQuery'));
+  setElementAttr('hybridSetDefaultBtn', 'title', t('saveCurrentQuery'));
+  setElementAttr('hybridSetDefaultBtn', 'aria-label', t('saveCurrentQuery'));
+
+  setTextContent(document.querySelector('label[for="hlSortSelect"].sr-only'), t('sortHeadlinesBy'));
+  setTextContent(document.querySelector('label[for="hybridSortSelect"].sr-only'), t('sortHybridHeadlinesBy'));
+  setElementAttr('hlSortSelect', 'aria-label', t('sortHeadlinesBy'));
+  setElementAttr('hybridSortSelect', 'aria-label', t('sortHybridHeadlinesBy'));
+  const hlSortOptions = el('hlSortSelect')?.options;
+  if (hlSortOptions?.[0]) hlSortOptions[0].textContent = t('newestFirst');
+  if (hlSortOptions?.[1]) hlSortOptions[1].textContent = t('oldestFirst');
+  const hybridSortOptions = el('hybridSortSelect')?.options;
+  if (hybridSortOptions?.[0]) hybridSortOptions[0].textContent = t('newestFirst');
+  if (hybridSortOptions?.[1]) hybridSortOptions[1].textContent = t('oldestFirst');
+
+  setElementText('hlSelectBtn', t('select'));
+  setElementText('hybridSelectBtn', t('select'));
+  setElementAttr('hlSelectBtn', 'title', t('selectArticles'));
+  setElementAttr('hybridSelectBtn', 'title', t('selectArticles'));
+
+  setElementText('lblResource', t('resource'));
+  setElementText('lblRegion', t('region'));
+  setElementText('lblCountry', t('country'));
+  setElementText('lblTimespan', t('timespan'));
+  setElementText('lblSearch', t('search'));
+  setTextContent(document.querySelector('.qp-and'), t('and'));
+  setTextContent(document.querySelector('.qp-or'), t('or'));
+  setElementAttr('resourceSelect', 'aria-label', t('selectResource'));
+  setElementAttr('regionSelect', 'aria-label', t('selectRegion'));
+  setElementAttr('countryInput', 'aria-label', t('selectCountry'));
+  setElementAttr('countrySuggest', 'aria-label', t('countrySuggestions'));
+  setElementAttr('countryInput', 'placeholder', t('countryPlaceholder'));
+  const timeBtns = document.querySelector('.qp-time-btns');
+  if (timeBtns) timeBtns.setAttribute('aria-label', t('selectTimespan'));
+  setElementAttr('searchBtn', 'title', t('search'));
+  setElementAttr('searchBtn', 'aria-label', t('search'));
+  setElementAttr('resetBtn', 'title', t('fullReset'));
+  setElementAttr('resetBtn', 'aria-label', t('fullReset'));
+
+  setElementAttr('selBar', 'aria-label', t('selectionActions'));
+  setElementText('selSelectAllBtn', t('selectAll'));
+  setElementAttr('selSelectAllBtn', 'title', t('selectAllVisible'));
+  setElementText('selShareBtn', t('share'));
+  setElementAttr('selShareBtn', 'title', t('shareSelected'));
+  setElementText('selExportBtn', t('export'));
+  setElementAttr('selExportBtn', 'title', t('exportSelected'));
+  setElementAttr('selClearBtn', 'title', t('deselectAll'));
+  setElementAttr('selClearBtn', 'aria-label', t('deselectAll'));
+
+  applySelectOptionLabels();
+
+  setUiStrings({
+    placeholderHtml: t('placeholderHtml'),
+    fetchingHeadlines: t('fetchingHeadlines'),
+    cancel: t('cancel'),
+    emptyState: t('emptyState'),
+    failedToLoadPrefix: currentUiLanguage === 'es' ? 'Error al cargar:' : currentUiLanguage === 'pt' ? 'Falha ao carregar:' : currentUiLanguage === 'ru' ? 'Ошибка загрузки:' : currentUiLanguage === 'zh-CN' ? '加载失败：' : 'Failed to load:',
+    tryAgain: t('tryAgain'),
+    loadMore: t('loadMore'),
+    articleSingular: t('articleSingular'),
+    articlePlural: t('articlePlural'),
+    cached: currentUiLanguage === 'zh-CN' ? '缓存' : currentUiLanguage === 'ru' ? 'кэш' : currentUiLanguage === 'es' ? 'en caché' : currentUiLanguage === 'pt' ? 'em cache' : 'cached',
+    lessThanOne: '<1',
+    minuteShort: currentUiLanguage === 'ru' ? 'м' : currentUiLanguage === 'zh-CN' ? '分' : 'm',
+    requestTimedOut: currentUiLanguage === 'es' ? 'La solicitud de titulares agotó el tiempo de espera. GDELT puede estar lento o limitando la tasa.' : currentUiLanguage === 'pt' ? 'A solicitação das manchetes expirou. O GDELT pode estar lento ou limitando requisições.' : currentUiLanguage === 'ru' ? 'Время ожидания запроса заголовков истекло. GDELT может отвечать медленно или ограничивать запросы.' : currentUiLanguage === 'zh-CN' ? '标题请求超时。GDELT 可能较慢或正在限流。' : 'Headline request timed out. GDELT may be slow or rate-limiting. Please try again.',
+    unableLoadHeadlines: currentUiLanguage === 'es' ? 'No es posible cargar los titulares ahora mismo. Inténtelo de nuevo.' : currentUiLanguage === 'pt' ? 'Não foi possível carregar as manchetes agora. Tente novamente.' : currentUiLanguage === 'ru' ? 'Сейчас не удалось загрузить заголовки. Повторите попытку.' : currentUiLanguage === 'zh-CN' ? '目前无法加载标题，请重试。' : 'Unable to load headlines right now. Please try again.',
+    rateLimited: currentUiLanguage === 'es' ? 'GDELT está limitando las solicitudes en este momento. Espere un momento y vuelva a intentarlo.' : currentUiLanguage === 'pt' ? 'O GDELT está limitando as requisições agora. Aguarde um momento e tente novamente.' : currentUiLanguage === 'ru' ? 'GDELT сейчас ограничивает запросы. Подождите немного и повторите попытку.' : currentUiLanguage === 'zh-CN' ? 'GDELT 当前正在限流。请稍后再试。' : 'GDELT is rate-limiting requests right now. Wait a moment and retry.',
+  });
+
+  setMapUiStrings({
+    articleSingular: t('articleSingular'),
+    articlePlural: t('articlePlural'),
+    more: t('more'),
+  });
+
+  updateSelBar(getSelectedArticles().length);
+  updateViewStatus('hybrid', getDisplayArticles().length);
+  if (currentView === 'hybrid') {
+    updateHybridMap(getMapArticles(), getCountryFilter());
+    renderHybridList(getDisplayArticles());
+  }
+}
 
 function countryLabelFromKey(key) {
   return String(key)
@@ -37,7 +378,24 @@ function hideCountrySuggestions() {
   if (!box) return;
   box.hidden = true;
   box.innerHTML = '';
+  box.style.left = '';
+  box.style.top = '';
+  box.style.width = '';
+  box.style.maxHeight = '';
   activeCountrySuggestion = -1;
+}
+
+function positionCountrySuggestions() {
+  const box = el('countrySuggest');
+  const input = el('countryInput');
+  if (!box || !input || box.hidden) return;
+  const rect = input.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const spaceBelow = Math.max(120, viewportHeight - rect.bottom - 12);
+  box.style.left = `${Math.round(rect.left)}px`;
+  box.style.top = `${Math.round(rect.bottom + 4)}px`;
+  box.style.width = `${Math.round(rect.width)}px`;
+  box.style.maxHeight = `${Math.round(spaceBelow)}px`;
 }
 
 function applyCountrySuggestion(value) {
@@ -66,6 +424,7 @@ function showCountrySuggestions(query) {
   activeCountrySuggestion = -1;
   box.innerHTML = matches.map((name, idx) => `<button type="button" class="country-suggest-item" data-idx="${idx}" data-country="${esc(name)}">${esc(name)}</button>`).join('');
   box.hidden = false;
+  positionCountrySuggestions();
 }
 
 function moveCountrySuggestion(delta) {
@@ -100,7 +459,7 @@ function setHybridStatus(state) {
   if (!container) return;
   _hybridStatusActive = !!state;
   if (!state) return;
-  const msg = state === 'downloading' ? 'Downloading\u2026' : 'Translating\u2026';
+  const msg = state === 'downloading' ? t('downloading') : t('translating');
   container.innerHTML = `<div class="hybrid-status"><div class="spinner"></div><span class="hybrid-status-msg">${msg}</span></div>`;
 }
 
@@ -148,7 +507,7 @@ function renderHybridList(articles) {
   const container = el('hybridHeadlines');
   if (!container) return;
   if (!articles.length) {
-    container.innerHTML = '<p class="hybrid-empty">Run a search above.</p>';
+    container.innerHTML = `<p class="hybrid-empty">${t('runSearchAbove')}</p>`;
     return;
   }
   container.innerHTML = buildArticleRowsHtml(articles);
@@ -171,7 +530,7 @@ function updateViewStatus(view, count) {
     const c = Number(count) || 0;
     const filter = getCountryFilter();
     const suffix = filter ? ` · ${filter}` : '';
-    hc.textContent = `${c.toLocaleString()} article${c === 1 ? '' : 's'}${suffix}`;
+    hc.textContent = `${c.toLocaleString()} ${c === 1 ? t('articleSingular') : t('articlePlural')}${suffix}`;
   }
 }
 
@@ -181,27 +540,28 @@ function applyCountryFilterFromMap(country) {
   setCountryFilter(raw);
   const input = el('countryInput');
   if (input) input.value = raw;
-  showToast(`Filtered to ${raw}`);
+  showToast(t('filteredTo', { country: raw }));
 }
 
 function clearCountryFilterFromBar() {
   setCountryFilter('');
   const input = el('countryInput');
   if (input) input.value = '';
-  showToast('Country filter cleared');
+  showToast(t('countryFilterCleared'));
 }
 
 function applyTranslate(enabled) {
-  translateEnabled = enabled; setTranslateEnabled(enabled);
-  el('translateToggleBtn')?.setAttribute('aria-pressed', String(enabled));
-  el('translateToggleBtn')?.classList.toggle('active', enabled);
-  const lbl = el('translateBtnLabel'); if (lbl) lbl.textContent = enabled ? 'EN' : 'OFF';
+  const changed = translateEnabled !== enabled;
+  translateEnabled = enabled;
+  if (changed) setTranslateEnabled(enabled);
+  el('languageSelect')?.classList.toggle('active', enabled);
 }
 
 function applyTranslationLanguage(language) {
-  const normalized = String(language || 'en').trim().toLowerCase() || 'en';
+  const normalized = normalizeTranslateLanguage(language);
   const select = el('languageSelect');
   if (select) select.value = normalized;
+  applyUiLanguage(normalized);
   setTranslateLanguage(normalized);
   applyTranslate(true);
 }
@@ -228,14 +588,14 @@ function loadStoredDefault() {
 
 function saveDefault() {
   const p = readFormParams();
-  if (!buildQuery(p)) { showToast('Nothing to save — run a search first.'); return; }
+  if (!buildQuery(p)) { showToast(t('nothingToSave')); return; }
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
       resource: p.resource, region: p.region, country: p.country, timespan: currentTimespan,
     }));
-    showToast('Default saved');
+    showToast(t('defaultSaved'));
     el('setDefaultBtn')?.classList.add('saved');
-  } catch { showToast('Could not save — storage unavailable.'); }
+  } catch { showToast(t('storageUnavailable')); }
 }
 
 function showDefaultBadge(visible) {
@@ -246,7 +606,7 @@ function showDefaultBadge(visible) {
 
 async function doSearch() {
   const params = readFormParams(), query = buildQuery(params);
-  if (!query) { showToast('Please select a resource or enter a keyword.'); return; }
+  if (!query) { showToast(t('missingQuery')); return; }
   lastBuiltQuery = query;
   showDefaultBadge(false);
   await runQuery(query, currentTimespan);
@@ -281,7 +641,7 @@ function updateSelBar(count) {
   if (!bar) return;
   bar.classList.toggle('sel-bar-visible', count > 0);
   positionSelBar();
-  const lbl = el('selBarCount'); if (lbl) lbl.textContent = `${count} selected`;
+  const lbl = el('selBarCount'); if (lbl) lbl.textContent = t('selectedCount', { count });
 }
 
 function positionSelBar() {
@@ -322,8 +682,8 @@ async function shareSelected() {
   }
   try {
     await navigator.clipboard.writeText(arts.length === 1 ? `${arts[0].title}\n${arts[0].url}` : `${payload.title}\n\n${lines}`);
-    showToast('Copied to clipboard');
-  } catch { showToast('Could not share — try Export instead'); }
+    showToast(t('copiedToClipboard'));
+  } catch { showToast(t('shareFailed')); }
 }
 
 function exportSelectedHtml() {
@@ -343,7 +703,6 @@ function fullPageReset() {
 
 function wireEvents() {
   qsa('.view-btn[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
-  el('translateToggleBtn')?.addEventListener('click', () => applyTranslate(!translateEnabled));
   el('languageSelect')?.addEventListener('change', e => applyTranslationLanguage(e.target.value));
   qsa('.time-btn').forEach(b => b.addEventListener('click', () => {
     const ts = b.dataset.timespan; setActiveTimespanBtn(ts);
@@ -397,6 +756,8 @@ function wireEvents() {
     if (!btn) return;
     applyCountrySuggestion(btn.dataset.country || btn.textContent || '');
   });
+  window.addEventListener('resize', positionCountrySuggestions);
+  window.addEventListener('scroll', positionCountrySuggestions, true);
   el('hlSortSelect')?.addEventListener('change', e => {
     const value = e.target.value;
     const hs = el('hybridSortSelect'); if (hs) hs.value = value;

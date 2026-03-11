@@ -8,6 +8,12 @@ const TILE_OPTS = {
   maxZoom: 16,
 };
 
+let _uiText = {
+  articleSingular: 'article',
+  articlePlural: 'articles',
+  more: 'more',
+};
+
 function createMapInstance() {
   let map = null;
   let circleLayer = null;
@@ -80,13 +86,15 @@ function createMapInstance() {
         return `<li><a href="${h(u)}" target="_blank" rel="noopener noreferrer">${h(t)}</a></li>`;
       }).join('');
       const more = info.articles.length > 6
-        ? `<p class="map-popup-more">+${info.articles.length - 6} more</p>` : '';
+        ? `<p class="map-popup-more">+${info.articles.length - 6} ${_uiText.more}</p>` : '';
+
+      const articleCountLabel = `${count} ${count === 1 ? _uiText.articleSingular : _uiText.articlePlural}`;
 
       circle.bindPopup(
         `<div class="map-popup">
           <div class="map-popup-header">
             <strong class="map-popup-country">${h(info.name)}</strong>
-            <span class="map-popup-count">${count} article${count === 1 ? '' : 's'}</span>
+            <span class="map-popup-count">${articleCountLabel}</span>
           </div>
           <ul class="map-popup-links">${links}</ul>
           ${more}
@@ -95,12 +103,12 @@ function createMapInstance() {
       );
       if (isSelected) {
         circle.bindTooltip(
-          `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${count} article${count === 1 ? '' : 's'}</span></div>`,
+          `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${articleCountLabel}</span></div>`,
           { direction: 'center', permanent: true, className: 'map-dot-selected-wrap', opacity: 1 }
         );
       } else {
         circle.bindTooltip(
-          `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${count} article${count === 1 ? '' : 's'}</span></div>`,
+          `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${articleCountLabel}</span></div>`,
           { direction: 'center', sticky: true, className: 'map-dot-selected-wrap', opacity: 1 }
         );
       }
@@ -142,6 +150,9 @@ export function updateHybridMap(articles, selectedCountry) { _hybrid.update(arti
 export function setMapCountryClickHandler(handler) {
   _main.setOnCountryClick(handler);
   _hybrid.setOnCountryClick(handler);
+}
+export function setMapUiStrings(uiText = {}) {
+  _uiText = { ..._uiText, ...uiText };
 }
 
 function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
