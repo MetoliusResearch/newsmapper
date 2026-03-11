@@ -11,6 +11,8 @@ const TILE_OPTS = {
 function createMapInstance() {
   let map = null;
   let circleLayer = null;
+  let onCountryClick = null;
+  let preserveViewNextUpdate = false;
 
   function init(containerId) {
     if (map) {
@@ -29,10 +31,11 @@ function createMapInstance() {
     circleLayer = L.layerGroup().addTo(map);
   }
 
-  function update(articles) {
+  function update(articles, selectedCountry = '') {
     if (!map || !circleLayer) return;
     circleLayer.clearLayers();
     if (!articles.length) return;
+    const selectedKey = String(selectedCountry || '').trim().toLowerCase();
 
     const counts    = new Map();
     const byCountry = new Map();
@@ -48,19 +51,26 @@ function createMapInstance() {
 
     const maxCount = Math.max(...counts.values());
     const MIN_R = 6, MAX_R = 40;
+    const points = [];
 
     for (const [key, count] of counts) {
       const coords = COUNTRY_COORDS[key];
       if (!coords) continue;
+      points.push(coords);
 
-      const r    = MIN_R + (MAX_R - MIN_R) * Math.sqrt(count / maxCount);
+      const isSelected = !!selectedKey && key === selectedKey;
+      const isDimmed = !!selectedKey && key !== selectedKey;
+      const rBase = MIN_R + (MAX_R - MIN_R) * Math.sqrt(count / maxCount);
+      const r = isSelected ? Math.max(28, rBase) : rBase;
       const info = byCountry.get(key);
 
       const circle = L.circleMarker(coords, {
         radius:      r,
-        fillColor:   '#0074D9',
-        fillOpacity: 0.7,
-        stroke:      false,
+        fillColor:   isDimmed ? '#b0b5c0' : '#0074D9',
+        fillOpacity: isDimmed ? 0.42 : 0.5,
+        stroke:      isSelected,
+        color:       '#ffffff',
+        weight:      isSelected ? 1.25 : 0,
       });
 
       const top   = info.articles.slice(0, 6);
@@ -83,21 +93,57 @@ function createMapInstance() {
         </div>`,
         { maxWidth: 300, className: 'map-popup-wrap' }
       );
+      if (isSelected) {
+        circle.bindTooltip(
+          `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${count} article${count === 1 ? '' : 's'}</span></div>`,
+          { direction: 'center', permanent: true, className: 'map-dot-selected-wrap', opacity: 1 }
+        );
+      } else {
+        circle.bindTooltip(
+          `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${count} article${count === 1 ? '' : 's'}</span></div>`,
+          { direction: 'top', sticky: true, className: 'map-dot-selected-wrap', opacity: 1 }
+        );
+      }
+      circle.on('click', () => {
+        // Keep current zoom/center when click-driven filtering updates markers.
+        preserveViewNextUpdate = true;
+        onCountryClick?.({ country: info.name, key, count, articles: info.articles.slice() });
+      });
 
       circleLayer.addLayer(circle);
     }
+
+    if (!points.length) return;
+    if (preserveViewNextUpdate) {
+      preserveViewNextUpdate = false;
+      return;
+    }
+    if (points.length === 1) {
+      map.setView(points[0], 6);
+      return;
+    }
+    const bounds = L.latLngBounds(points.map(([lat, lng]) => L.latLng(lat, lng)));
+    map.fitBounds(bounds, { padding: [10, 10], maxZoom: 6 });
   }
 
-  return { init, update };
+  function setOnCountryClick(handler) {
+    onCountryClick = typeof handler === 'function' ? handler : null;
+  }
+
+  return { init, update, setOnCountryClick };
 }
 
 const _main   = createMapInstance();
 const _hybrid = createMapInstance();
 
 export function initMap(containerId)       { _main.init(containerId); }
-export function updateMap(articles)        { _main.update(articles); }
+export function updateMap(articles, selectedCountry) { _main.update(articles, selectedCountry); }
 export function initHybridMap(containerId) { _hybrid.init(containerId); }
-export function updateHybridMap(articles)  { _hybrid.update(articles); }
+export function updateHybridMap(articles, selectedCountry) { _hybrid.update(articles, selectedCountry); }
+export function setMapCountryClickHandler(handler) {
+  _main.setOnCountryClick(handler);
+  _hybrid.setOnCountryClick(handler);
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }

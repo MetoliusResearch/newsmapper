@@ -1,23 +1,63 @@
 import { buildQuery } from './query.js';
+import './styles.css';
 import {
   fetchAndRender, filterByTimespan, setSortOrder, loadMore, hasCachedData,
   setTranslateEnabled, toggleSelectMode, clearSelection, selectAll,
   getSelectedArticles, setSelectionChangeCallback,
-  getFilteredArticles, setOnRenderCallback,
+  setOnRenderCallback,
+  setCountryFilter, getCountryFilter,
+  getDisplayArticles, buildArticleRowsHtml, getMapArticles,
 } from './headlines.js';
-import { initMap, updateMap, initHybridMap, updateHybridMap } from './mapview.js';
+import { initHybridMap, updateHybridMap, setMapCountryClickHandler } from './mapview.js';
+import { COUNTRY_COORDS } from './countries.js';
 
-let currentView = 'headlines', currentTimespan = '7d';
+let currentView = 'hybrid', currentTimespan = '7d';
 let translateEnabled = true, lastBuiltQuery = '', selectModeOn = false;
 const LS_KEY = 'nm_default';
 
 const el  = id  => document.getElementById(id);
 const qsa = sel => [...document.querySelectorAll(sel)];
 
+function countryLabelFromKey(key) {
+  return String(key)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(part => part[0].toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function hydrateCountrySuggestions() {
+  const list = el('countrySuggestions');
+  if (!list) return;
+  const names = [...new Set(Object.keys(COUNTRY_COORDS).map(countryLabelFromKey))].sort((a, b) => a.localeCompare(b));
+  list.innerHTML = names.map(name => `<option value="${name}"></option>`).join('');
+}
+
 function showToast(msg, ms = 2500) {
   const t = el('toast'); if (!t) return;
   t.textContent = msg; t.classList.add('toast-visible');
   setTimeout(() => t.classList.remove('toast-visible'), ms);
+}
+
+function setSearchLoading(on) {
+  const btn = el('searchBtn');
+  if (!btn) return;
+  btn.classList.toggle('loading', !!on);
+  btn.setAttribute('aria-busy', String(!!on));
+  btn.disabled = !!on;
+}
+
+async function runQuery(query, timespan) {
+  setSearchLoading(true);
+  try {
+    if (hasCachedData(query)) {
+      filterByTimespan(timespan);
+    } else {
+      await fetchAndRender(query, timespan);
+    }
+  } finally {
+    setSearchLoading(false);
+  }
 }
 
 function switchView(view) {
@@ -30,13 +70,8 @@ function switchView(view) {
     const on = p.id === `view${view[0].toUpperCase()}${view.slice(1)}`;
     p.classList.toggle('active', on);
   });
-  if (view === 'map') showMap();
   if (view === 'hybrid') showHybrid();
-}
-
-function showMap() {
-  initMap('mapContainer');
-  updateMap(getFilteredArticles());
+  positionSelBar();
 }
 
 function renderHybridList(articles) {
@@ -46,28 +81,44 @@ function renderHybridList(articles) {
     container.innerHTML = '<p class="hybrid-empty">No articles — run a search first.</p>';
     return;
   }
-  container.innerHTML = articles.map(a => {
-    const title = a.title || 'Untitled';
-    const meta  = [a.sourcecountry, a.domain,
-                   a.seendatetime ? a.seendatetime.slice(0, 8).replace(/^(\d{4})(\d{2})(\d{2})$/, '$2/$3/$1') : '']
-                  .filter(Boolean).join(' · ');
-    let href = '#';
-    try {
-      const u = new URL(a.url);
-      if (u.protocol === 'http:' || u.protocol === 'https:') href = u.href.replace(/"/g, '%22');
-    } catch { /* keep '#' */ }
-    return `<a class="hybrid-art" href="${href}" target="_blank" rel="noopener noreferrer">
-      <span class="hybrid-art-title">${esc(title)}</span>
-      <span class="hybrid-art-meta">${esc(meta)}</span>
-    </a>`;
-  }).join('');
+  container.innerHTML = buildArticleRowsHtml(articles);
+  container.classList.toggle('select-mode', selectModeOn);
 }
 
 function showHybrid() {
   initHybridMap('hybridMapContainer');
-  const arts = getFilteredArticles();
-  updateHybridMap(arts);
-  renderHybridList(arts);
+  const rawArts = getMapArticles();
+  const displayArts = getDisplayArticles();
+  updateHybridMap(rawArts, getCountryFilter());
+  renderHybridList(displayArts);
+  updateViewStatus('hybrid', displayArts.length);
+}
+
+function updateViewStatus(view, count) {
+  if (view !== 'hybrid') return;
+  const hc = el('hybridHlCount');
+  if (hc) {
+    const c = Number(count) || 0;
+    const filter = getCountryFilter();
+    const suffix = filter ? ` · ${filter}` : '';
+    hc.textContent = `${c.toLocaleString()} article${c === 1 ? '' : 's'}${suffix}`;
+  }
+}
+
+function applyCountryFilterFromMap(country) {
+  const raw = String(country || '').trim();
+  if (!raw) return;
+  setCountryFilter(raw);
+  const input = el('countryInput');
+  if (input) input.value = raw;
+  showToast(`Filtered to ${raw}`);
+}
+
+function clearCountryFilterFromBar() {
+  setCountryFilter('');
+  const input = el('countryInput');
+  if (input) input.value = '';
+  showToast('Country filter cleared');
 }
 
 function applyTranslate(enabled) {
@@ -115,13 +166,12 @@ function showDefaultBadge(visible) {
   if (!visible) el('setDefaultBtn')?.classList.remove('saved');
 }
 
-function doSearch() {
+async function doSearch() {
   const params = readFormParams(), query = buildQuery(params);
   if (!query) { showToast('Please select a resource or enter a keyword.'); return; }
   lastBuiltQuery = query;
   showDefaultBadge(false);
-  if (currentView !== 'headlines') switchView('headlines');
-  hasCachedData(query) ? filterByTimespan(currentTimespan) : fetchAndRender(query, currentTimespan);
+  await runQuery(query, currentTimespan);
   const url = new URL(window.location.href);
   params.resource ? url.searchParams.set('r', params.resource) : url.searchParams.delete('r');
   params.region   ? url.searchParams.set('rg', params.region)  : url.searchParams.delete('rg');
@@ -149,8 +199,29 @@ function restoreFromURL() {
 }
 
 function updateSelBar(count) {
-  el('selBar')?.classList.toggle('sel-bar-visible', count > 0);
+  const bar = el('selBar');
+  if (!bar) return;
+  bar.classList.toggle('sel-bar-visible', count > 0);
+  positionSelBar();
   const lbl = el('selBarCount'); if (lbl) lbl.textContent = `${count} selected`;
+}
+
+function positionSelBar() {
+  const bar = el('selBar');
+  if (!bar) return;
+  if (currentView === 'hybrid' && bar.classList.contains('sel-bar-visible')) {
+    const mapEl = el('hybridMapContainer');
+    if (!mapEl) return;
+    const mapTop = mapEl.getBoundingClientRect().top;
+    const barH = bar.getBoundingClientRect().height || 48;
+    bar.classList.add('sel-bar-over-map');
+    bar.style.top = `${Math.max(0, mapTop - Math.round(barH / 2))}px`;
+    bar.style.bottom = 'auto';
+    return;
+  }
+  bar.classList.remove('sel-bar-over-map');
+  bar.style.top = '';
+  bar.style.bottom = '0';
 }
 
 function esc(s) {
@@ -187,19 +258,38 @@ function exportSelectedHtml() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
+function fullPageReset() {
+  // Clean path navigation guarantees no stale query params or in-memory state survive.
+  const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+  window.location.assign(cleanUrl);
+}
+
 function wireEvents() {
   qsa('.view-btn[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
   el('translateToggleBtn')?.addEventListener('click', () => applyTranslate(!translateEnabled));
   qsa('.time-btn').forEach(b => b.addEventListener('click', () => {
     const ts = b.dataset.timespan; setActiveTimespanBtn(ts);
-    if (lastBuiltQuery) hasCachedData(lastBuiltQuery) ? filterByTimespan(ts) : fetchAndRender(lastBuiltQuery, ts);
+    const hs = el('hybridSortSelect'); if (hs) hs.value = el('hlSortSelect')?.value || 'date-desc';
+    if (lastBuiltQuery) runQuery(lastBuiltQuery, ts);
   }));
   el('setDefaultBtn')?.addEventListener('click', saveDefault);
+  el('hybridSetDefaultBtn')?.addEventListener('click', saveDefault);
   el('hlSelectBtn')?.addEventListener('click', () => {
     selectModeOn = !selectModeOn;
     toggleSelectMode(selectModeOn);
     el('hlSelectBtn')?.classList.toggle('active', selectModeOn);
     el('hlSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
+    el('hybridSelectBtn')?.classList.toggle('active', selectModeOn);
+    el('hybridSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
+    if (!selectModeOn) updateSelBar(0);
+  });
+  el('hybridSelectBtn')?.addEventListener('click', () => {
+    selectModeOn = !selectModeOn;
+    toggleSelectMode(selectModeOn);
+    el('hlSelectBtn')?.classList.toggle('active', selectModeOn);
+    el('hlSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
+    el('hybridSelectBtn')?.classList.toggle('active', selectModeOn);
+    el('hybridSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
     if (!selectModeOn) updateSelBar(0);
   });
   el('selSelectAllBtn')?.addEventListener('click', selectAll);
@@ -207,11 +297,21 @@ function wireEvents() {
   el('selExportBtn')?.addEventListener('click', exportSelectedHtml);
   el('selClearBtn')?.addEventListener('click', () => { clearSelection(); updateSelBar(0); });
   setSelectionChangeCallback(count => updateSelBar(count));
-  el('searchBtn')?.addEventListener('click', doSearch);
-  el('countryInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
-  el('hlSortSelect')?.addEventListener('change', e => setSortOrder(e.target.value));
+  el('searchBtn')?.addEventListener('click', () => { void doSearch(); });
+  el('resetBtn')?.addEventListener('click', fullPageReset);
+  el('countryInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') void doSearch(); });
+  el('hlSortSelect')?.addEventListener('change', e => {
+    const value = e.target.value;
+    const hs = el('hybridSortSelect'); if (hs) hs.value = value;
+    setSortOrder(value);
+  });
+  el('hybridSortSelect')?.addEventListener('change', e => {
+    const value = e.target.value;
+    const hs = el('hlSortSelect'); if (hs) hs.value = value;
+    setSortOrder(value);
+  });
   el('hlLoadMoreBtn')?.addEventListener('click', loadMore);
-  el('hlRetryBtn')?.addEventListener('click', () => { if (lastBuiltQuery) fetchAndRender(lastBuiltQuery, currentTimespan); });
+  el('hlRetryBtn')?.addEventListener('click', () => { if (lastBuiltQuery) runQuery(lastBuiltQuery, currentTimespan); });
 }
 
 function setupPullToRefresh() {
@@ -228,11 +328,15 @@ function setupPullToRefresh() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  hydrateCountrySuggestions();
   wireEvents(); applyTranslate(true);
+  setMapCountryClickHandler(({ country }) => applyCountryFilterFromMap(country));
   setOnRenderCallback(articles => {
-    if (currentView === 'map') updateMap(articles);
-    if (currentView === 'hybrid') { updateHybridMap(articles); renderHybridList(articles); }
+    updateViewStatus('hybrid', getDisplayArticles().length);
+    if (currentView === 'hybrid') { updateHybridMap(getMapArticles(), getCountryFilter()); renderHybridList(getDisplayArticles()); }
   });
   setupPullToRefresh();
+  switchView('hybrid');
   restoreFromURL();
+  window.addEventListener('resize', positionSelBar, { passive: true });
 });

@@ -18,6 +18,7 @@ export const RESOURCE_MAP = {
   Tin:       'tin AND (mining OR mine OR production OR exploration OR mineral OR ore)',
   Tantalum: 'tantalum', Tungsten: 'tungsten', Manganese: 'manganese',
   Uranium: 'uranium', Antimony: 'antimony',
+  'Critical Minerals': '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
   ETMs:            '(lithium OR cobalt OR nickel OR copper OR graphite OR manganese OR "rare earths" OR platinum OR palladium OR antimony)',
   'Aluminum/Bauxite': '(aluminum OR bauxite) AND (mining OR mine OR production OR exploration)',
   'Palm Oil':  '("palm oil" OR "oil palm" OR "palm plantation")',
@@ -42,10 +43,13 @@ export function buildQuery({ resource = '', region = '', country = '' } = {}) {
   const rKey = Object.keys(RESOURCE_MAP).find(k => k.toLowerCase() === resource.toLowerCase());
   const rTerm = rKey ? RESOURCE_MAP[rKey] : resource;
   if (rTerm) parts.push(rTerm);
-  let loc = (region && region !== 'Global') ? (REGION_MAP[region] || region) : '';
+  let loc = '';
   if (country) {
+    // Country overrides region so queries never combine both location scopes.
     const q = !country.startsWith('"') && (country.includes(' ') || country.includes('-')) ? `"${country}"` : country;
-    loc = loc ? `(${loc} OR ${q})` : q;
+    loc = q;
+  } else if (region && region !== 'Global') {
+    loc = REGION_MAP[region] || region;
   }
   if (loc) parts.push(loc);
   return parts.join(' AND ');

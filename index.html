@@ -18,7 +18,6 @@
   <title>NewsMapper 2.0 — Natural Resources</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="src/styles.css" />
 </head>
 <body>
   <!-- Top navigation bar -->
@@ -30,18 +29,15 @@
         <span class="topbar-sub">Natural Resources Intelligence</span>
       </div>
     </div>
+    <span class="topbar-powered">powered by GDELT</span>
     <nav class="topbar-nav">
-      <button class="view-btn active" data-view="headlines" title="Headlines view" aria-pressed="true">
+      <button class="view-btn" data-view="headlines" title="Headlines view" aria-pressed="false">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         <span class="view-btn-label">Headlines</span>
       </button>
-      <button class="view-btn" data-view="hybrid" title="Hybrid view (map + headlines)" aria-pressed="false">
+      <button class="view-btn active" data-view="hybrid" title="Hybrid view (map + headlines)" aria-pressed="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="9" rx="2"/><rect x="2" y="13" width="20" height="9" rx="2"/></svg>
         <span class="view-btn-label">Hybrid</span>
-      </button>
-      <button class="view-btn" data-view="map" title="Map view" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"/></svg>
-        <span class="view-btn-label">Map</span>
       </button>
       <button class="topbar-translate-btn" id="translateToggleBtn" title="Toggle auto-translate (English)" aria-pressed="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
@@ -63,7 +59,7 @@
               <option value="Oil">Oil</option>
               <option value="LNG">LNG / Natural Gas</option>
               <option value="Coal">Coal</option>
-              <option value="Fossil Fuels">Fossil Fuels (broad)</option>
+              <option value="Fossil Fuels">Fossil Fuels</option>
             </optgroup>
             <optgroup label="Mining">
               <option value="Mining">Mining (broad)</option>
@@ -75,7 +71,7 @@
               <option value="Nickel">Nickel</option>
               <option value="Iron">Iron Ore</option>
               <option value="Uranium">Uranium</option>
-              <option value="ETMs">Critical Minerals (ETMs)</option>
+              <option value="Critical Minerals">Critical Minerals</option>
             </optgroup>
             <optgroup label="Agriculture / Land">
               <option value="Palm Oil">Palm Oil</option>
@@ -86,6 +82,8 @@
           </select>
         </div>
       </div>
+
+      <div class="qp-and" aria-hidden="true">AND</div>
 
       <!-- Region selector -->
       <div class="qp-group">
@@ -105,10 +103,15 @@
         </div>
       </div>
 
+      <div class="qp-or" aria-hidden="true">OR</div>
+
       <!-- Country free text -->
       <div class="qp-group qp-group-country">
         <label class="qp-label" for="countryInput">Country</label>
-        <input id="countryInput" class="qp-input" type="text" placeholder="e.g. Congo" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Country filter" />
+        <div class="qp-select-wrap">
+          <input id="countryInput" class="qp-select qp-country-input" type="text" list="countrySuggestions" placeholder="e.g. Congo" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Country filter" />
+        </div>
+        <datalist id="countrySuggestions"></datalist>
       </div>
 
       <!-- Time range -->
@@ -126,6 +129,9 @@
         <button class="search-btn" id="searchBtn" type="button" title="Search" aria-label="Search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
+        <button class="reset-btn" id="resetBtn" type="button" title="Full reset" aria-label="Full reset">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M20.49 15a9 9 0 1 1 .51-9"/></svg>
+        </button>
       </div>
     </div>
 
@@ -135,7 +141,7 @@
   <main class="app-main" id="appMain">
 
     <!-- ── HEADLINES VIEW ─────────────────────────────────── -->
-    <div class="view-panel active" id="viewHeadlines" role="region" aria-label="Headlines">
+    <div class="view-panel" id="viewHeadlines" role="region" aria-label="Headlines">
       <div class="hl-toolbar">
         <span class="hl-count" id="hlCount"></span>
         <span class="aqb-default-badge" id="defaultBadge" style="display:none;" aria-label="Loaded from saved default">★ default</span>
@@ -166,11 +172,6 @@
       <div class="hl-state" id="hlStateLoading" style="display:none;">
         <div class="spinner"></div>
         <p class="hl-state-msg" id="hlLoadingMsg">Fetching headlines…</p>
-        <div class="fetch-progress-wrap">
-          <div class="fetch-progress-bar" id="fetchProgressBar"></div>
-        </div>
-        <p class="fetch-countdown" id="fetchCountdown"></p>
-        <p class="fetch-status-msg" id="fetchStatusMsg"></p>
         <button class="retry-btn" id="fetchCancelBtn" style="margin-top:.25rem;">Cancel</button>
       </div>
       <div class="hl-state" id="hlStateEmpty" style="display:none;">
@@ -197,14 +198,27 @@
     </div>
 
     <!-- ── HYBRID VIEW ──────────────────────────────────────── -->
-    <div class="view-panel" id="viewHybrid" role="region" aria-label="Hybrid map + headlines">
+    <div class="view-panel active" id="viewHybrid" role="region" aria-label="Hybrid map + headlines">
+      <div class="hl-toolbar hybrid-toolbar">
+        <span class="hl-count" id="hybridHlCount"></span>
+        <button class="aqb-save-default" id="hybridSetDefaultBtn" title="Save current query as default" aria-label="Save as default">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+          Set default
+        </button>
+        <div class="hl-filter-wrap">
+          <label for="hybridSortSelect" class="sr-only">Sort hybrid headlines by</label>
+          <select id="hybridSortSelect" class="hl-sort-select" aria-label="Sort hybrid headlines">
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+          </select>
+        </div>
+        <button class="hl-select-btn" id="hybridSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Select
+        </button>
+      </div>
       <div id="hybridMapContainer"></div>
       <div id="hybridHeadlines" class="hybrid-headlines"></div>
-    </div>
-
-    <!-- ── MAP VIEW ─────────────────────────────────────────── -->
-    <div class="view-panel" id="viewMap" role="region" aria-label="Map view">
-      <div id="mapContainer"></div>
     </div>
 
   </main>

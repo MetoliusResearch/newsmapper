@@ -8,55 +8,15 @@ const _articleCache = new Map();
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
 let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
 let _translateEnabled = true;
+let _countryFilterKey = '', _countryFilterLabel = '';
 let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null, _onRenderCallback = null;
 let _filteredArticles = [];
+let _displayArticles = [];
+let _mapArticles = [];
 const _titleCache = new Map();
 
-// ─ progress bar / countdown state ─
-let _countdownTimer = null;
+// ─ fetch state ─
 let _cancelCtrl = null;   // AbortController for the current in-flight fetch
-
-function setStatus(msg) {
-  const s = document.getElementById('fetchStatusMsg');
-  if (s) s.textContent = msg || '';
-}
-
-function startProgress(totalMs) {
-  stopProgress();
-  const bar = document.getElementById('fetchProgressBar');
-  const lbl = document.getElementById('fetchCountdown');
-  setStatus('');
-  if (!bar || !lbl) return;
-  bar.classList.remove('error');
-  bar.style.transition = 'none';
-  bar.style.width = '0%';
-  void bar.offsetWidth;
-  bar.style.transition = `width ${totalMs}ms linear`;
-  bar.style.width = '90%';
-  let remaining = Math.ceil(totalMs / 1000);
-  lbl.textContent = `${remaining}s…`;
-  _countdownTimer = setInterval(() => {
-    remaining--;
-    lbl.textContent = remaining > 0 ? `${remaining}s…` : '';
-  }, 1000);
-}
-
-function completeProgress(isError = false) {
-  stopProgress();
-  const bar = document.getElementById('fetchProgressBar');
-  const lbl = document.getElementById('fetchCountdown');
-  if (bar) {
-    bar.style.transition = 'width 0.25s ease';
-    bar.style.width = '100%';
-    if (isError) bar.classList.add('error');
-  }
-  if (lbl) lbl.textContent = '';
-}
-
-function stopProgress() {
-  clearInterval(_countdownTimer);
-  _countdownTimer = null;
-}
 
 const el = id => document.getElementById(id);
 
@@ -66,8 +26,6 @@ function getCached(query) {
   if (Date.now() - c.ts > CACHE_TTL) { _articleCache.delete(query); return null; }
   return c.articles;
 }
-
-function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function attemptFetch(url, timeoutMs) {
   // fresh controller each attempt
@@ -87,9 +45,8 @@ export async function fetchAndRender(query, timespan) {
   const cached = getCached(query);
   if (cached) { _allArticles = cached; renderFiltered(); return; }
 
+  // Immediately show loading feedback while waiting on network.
   setState('loading');
-  const totalBudgetMs = ATTEMPT_TIMEOUTS.reduce((a, b) => a + b, 0) + (ATTEMPT_TIMEOUTS.length - 1) * 1500;
-  startProgress(totalBudgetMs);
 
   // Wire up Cancel button
   const cancelBtn = document.getElementById('fetchCancelBtn');
@@ -100,35 +57,23 @@ export async function fetchAndRender(query, timespan) {
   let resp = null, cancelled = false;
 
   for (let i = 0; i < ATTEMPT_TIMEOUTS.length; i++) {
-    if (i > 0) {
-      setStatus(`Attempt ${i} timed out. Retrying…`);
-      await wait(1500);
-    } else {
-      setStatus('');
-    }
-    const msgEl = document.getElementById('hlLoadingMsg');
-    if (msgEl) msgEl.textContent = i === 0 ? 'Fetching headlines…' : `Retry ${i} of ${ATTEMPT_TIMEOUTS.length - 1}…`;
-
     try {
       resp = await attemptFetch(url, ATTEMPT_TIMEOUTS[i]);
-      setStatus('');
       break;
     } catch (err) {
       if (err?.message === 'user' || _cancelCtrl?.signal?.reason === 'user') {
         cancelled = true; break;
       }
-      setStatus(`Attempt ${i + 1} failed: ${err.name === 'AbortError' ? 'timed out' : err.message}`);
       resp = null;
     }
   }
 
   cancelBtn?.removeEventListener('click', onCancel);
 
-  if (cancelled) { setState('placeholder'); stopProgress(); return; }
+  if (cancelled) { setState('placeholder'); return; }
 
   if (!resp) {
-    completeProgress(true);
-    setState('error', 'All 3 attempts timed out. Check your connection and try again.');
+    setState('error', 'Unable to load headlines right now. Please try again.');
     return;
   }
 
@@ -137,10 +82,8 @@ export async function fetchAndRender(query, timespan) {
     const data = await resp.json();
     _allArticles = data.articles || [];
     _articleCache.set(query, { articles: _allArticles, ts: Date.now() });
-    completeProgress(false);
     renderFiltered();
   } catch (err) {
-    completeProgress(true);
     setState('error', err.message);
   }
 }
@@ -160,18 +103,19 @@ export function setTranslateEnabled(enabled) {
 export function toggleSelectMode(on) {
   _selectMode = on ?? !_selectMode;
   el('hlGrid')?.classList.toggle('select-mode', _selectMode);
+  el('hybridHeadlines')?.classList.toggle('select-mode', _selectMode);
   if (!_selectMode) clearSelection();
 }
 export function clearSelection() {
   _selectedUrls.clear();
-  el('hlGrid')?.querySelectorAll('.art-row.selected').forEach(r => {
+  document.querySelectorAll('#hlGrid .art-row.selected, #hybridHeadlines .art-row.selected').forEach(r => {
     r.classList.remove('selected');
     const cb = r.querySelector('.art-check-input'); if (cb) cb.checked = false;
   });
   _onSelectionChange?.(0, []);
 }
 export function selectAll() {
-  el('hlGrid')?.querySelectorAll('.art-row').forEach(r => {
+  document.querySelectorAll('.view-panel.active .art-row').forEach(r => {
     const url = r.dataset.artUrl; if (!url) return;
     _selectedUrls.add(url); r.classList.add('selected');
     const cb = r.querySelector('.art-check-input'); if (cb) cb.checked = true;
@@ -179,50 +123,102 @@ export function selectAll() {
   _onSelectionChange?.(_selectedUrls.size, getSelectedArticles());
 }
 export function getSelectedArticles() {
-  return [...(el('hlGrid')?.querySelectorAll('.art-row.selected') ?? [])].map(r => ({
-    title:   r.querySelector('.art-title')?.textContent.trim() || r.dataset.artTitle || '',
-    url:     r.dataset.artUrl     || '',
-    domain:  r.dataset.artDomain  || '',
-    country: r.dataset.artCountry || '',
-    date:    r.dataset.artDate    || '',
-  }));
+  const rows = [...document.querySelectorAll('#hlGrid .art-row.selected, #hybridHeadlines .art-row.selected')];
+  const seen = new Set();
+  const out = [];
+  for (const r of rows) {
+    const url = r.dataset.artUrl || '';
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    out.push({
+      title:   r.querySelector('.art-title')?.textContent.trim() || r.dataset.artTitle || '',
+      url,
+      domain:  r.dataset.artDomain  || '',
+      country: r.dataset.artCountry || '',
+      date:    r.dataset.artDate    || '',
+    });
+  }
+  return out;
 }
 export function setSelectionChangeCallback(fn) { _onSelectionChange = fn; }
 export function setOnRenderCallback(fn) { _onRenderCallback = fn; }
 export function getFilteredArticles() { return _filteredArticles; }
+export function getDisplayArticles() { return _displayArticles; }
+export function getMapArticles() { return _mapArticles; }
+export function buildArticleRowsHtml(articles) { return (articles || []).map(articleRow).join(''); }
+export function setCountryFilter(country) {
+  const raw = String(country || '').trim();
+  _countryFilterLabel = raw;
+  _countryFilterKey = raw.toLowerCase();
+  _visibleCount = _pageSize;
+  renderFiltered();
+}
+export function clearCountryFilter() {
+  _countryFilterKey = '';
+  _countryFilterLabel = '';
+  _visibleCount = _pageSize;
+  renderFiltered();
+}
+export function getCountryFilter() { return _countryFilterLabel; }
 
 document.addEventListener('DOMContentLoaded', () => {
-  el('hlGrid')?.addEventListener('click', e => {
-    if (!_selectMode) return;
-    const row = e.target.closest('.art-row'); if (!row) return;
-    e.preventDefault();
-    const url = row.dataset.artUrl; if (!url) return;
-    const checked = _selectedUrls.has(url);
-    checked ? _selectedUrls.delete(url) : _selectedUrls.add(url);
-    row.classList.toggle('selected', !checked);
-    const cb = row.querySelector('.art-check-input'); if (cb) cb.checked = !checked;
-    _onSelectionChange?.(_selectedUrls.size, getSelectedArticles());
-  });
+  const bindSelectHandler = id => {
+    el(id)?.addEventListener('click', e => {
+      if (!_selectMode) return;
+      const row = e.target.closest('.art-row'); if (!row) return;
+      e.preventDefault();
+      const url = row.dataset.artUrl; if (!url) return;
+      const checked = _selectedUrls.has(url);
+      checked ? _selectedUrls.delete(url) : _selectedUrls.add(url);
+      const nowOn = !checked;
+      document.querySelectorAll(`.art-row[data-art-url="${cssEsc(url)}"]`).forEach(r => {
+        r.classList.toggle('selected', nowOn);
+        const cb = r.querySelector('.art-check-input'); if (cb) cb.checked = nowOn;
+      });
+      _onSelectionChange?.(_selectedUrls.size, getSelectedArticles());
+    });
+  };
+  const bindExpandHandler = id => {
+    el(id)?.addEventListener('click', e => {
+      if (_selectMode) return;
+      const toggle = e.target.closest('.art-source-pill, .art-title-btn');
+      if (!toggle) return;
+      const row = e.target.closest('.art-row');
+      if (!row || row.dataset.hasSources !== '1') return;
+      e.preventDefault();
+      toggleSources(row);
+    });
+  };
+  bindSelectHandler('hlGrid');
+  bindSelectHandler('hybridHeadlines');
+  bindExpandHandler('hlGrid');
+  bindExpandHandler('hybridHeadlines');
 });
 
 function renderFiltered() {
   const cutoff = timespanToMs(_currentTimespan), now = Date.now();
   let arts = _allArticles.filter(a => { const d = parseDate(a.seendate); return d && (now - d) <= cutoff; });
-  if (!arts.length) { _filteredArticles = []; setState('empty'); return; }
+  _mapArticles = arts.slice();
+  if (_countryFilterKey) {
+    arts = arts.filter(a => (a.sourcecountry || '').trim().toLowerCase() === _countryFilterKey);
+  }
+  if (!arts.length) { _filteredArticles = []; _displayArticles = []; setState('empty'); _onRenderCallback?.(_filteredArticles); return; }
   arts = arts.slice().sort((a, b) => {
     const da = parseDate(a.seendate) ?? 0, db = parseDate(b.seendate) ?? 0;
     return _sortOrder === 'date-asc' ? da - db : db - da;
   });
   _filteredArticles = arts;
+  _displayArticles = consolidateArticles(arts);
   setState('results');
-  renderGrid(arts.slice(0, _visibleCount));
+  renderGrid(_displayArticles.slice(0, _visibleCount));
   const cnt = el('hlCount');
   const cacheEntry = _articleCache.get(_currentQuery);
   const ageMin = cacheEntry ? Math.floor((Date.now() - cacheEntry.ts) / 60000) : null;
   const cacheLabel = ageMin !== null ? ` · cached ${ageMin === 0 ? '<1' : ageMin}m` : '';
-  if (cnt) cnt.textContent = `${arts.length.toLocaleString()} article${arts.length === 1 ? '' : 's'}${cacheLabel}`;
+  const countryLabel = _countryFilterLabel ? ` · ${_countryFilterLabel}` : '';
+  if (cnt) cnt.textContent = `${_displayArticles.length.toLocaleString()} article${_displayArticles.length === 1 ? '' : 's'}${countryLabel}${cacheLabel}`;
   const wrap = el('hlLoadMoreWrap');
-  if (wrap) wrap.style.display = _visibleCount < arts.length ? 'flex' : 'none';
+  if (wrap) wrap.style.display = _visibleCount < _displayArticles.length ? 'flex' : 'none';
   if (_translateEnabled) translateNewTitles();
   _onRenderCallback?.(_filteredArticles);
 }
@@ -248,6 +244,7 @@ function articleRow(art) {
   const country = esc(art.sourcecountry || '');
   const lang    = esc(art.language || '');
   const date    = fmtDate(art.seendate);
+  const sourceCount = Number(art.sourceCount || 1);
   const isEn    = !lang || lang.toLowerCase() === 'english';
   const meta    = [country, domain].filter(Boolean).join(' · ');
   const cached  = _titleCache.get(art.title);
@@ -255,7 +252,17 @@ function articleRow(art) {
   const origAttr = (!isEn && !cached) ? ` data-orig="${title}"` : '';
   const imgUrl  = art.socialimage ? safeUrl(art.socialimage) : '';
   const thumb   = imgUrl && imgUrl !== '#' ? `<span class="art-thumb"><img src="${imgUrl}" loading="lazy" alt="" onerror="this.closest('.art-thumb').style.display='none'"></span>` : '';
-  return `<a class="art-row" href="${url}" data-art-url="${url}" data-art-title="${display}" data-art-domain="${domain}" data-art-country="${country}" data-art-date="${date}" target="_blank" rel="noopener noreferrer"><div class="art-row-body"><span class="art-title"${origAttr}>${display}</span><span class="art-row-meta">${meta ? `<span class="art-meta">${meta}</span>` : ''}${!isEn ? `<span class="art-lang">${lang}</span>` : ''}<span class="art-date">${date}</span></span></div>${thumb}<span class="art-check" aria-hidden="true"><input class="art-check-input" type="checkbox" tabindex="-1"></span></a>`;
+  const sourcePill = sourceCount > 1
+    ? `<button class="art-source-pill" type="button" aria-label="Show ${sourceCount} sources">${sourceCount} sources</button>`
+    : '';
+  const langLine = !isEn ? `<span class="art-row-submeta"><span class="art-lang">${lang}</span></span>` : '';
+  const titleBlock = sourceCount > 1
+    ? `<button class="art-title art-title-btn" type="button"${origAttr}>${display}</button>`
+    : `<a class="art-title art-title-link" href="${url}" target="_blank" rel="noopener noreferrer"${origAttr}>${display}</a>`;
+  const sourcesHtml = sourceCount > 1
+    ? `<div class="art-sources" hidden>${renderSources(art.sources || [])}</div>`
+    : '';
+  return `<div class="art-row" data-has-sources="${sourceCount > 1 ? '1' : '0'}" data-art-url="${url}" data-art-title="${display}" data-art-domain="${domain}" data-art-country="${country}" data-art-date="${date}"><div class="art-row-body">${titleBlock}<span class="art-row-meta">${meta ? `<span class="art-meta">${meta}</span>` : ''}${sourcePill}<span class="art-date">${date}</span></span>${langLine}${sourcesHtml}</div>${thumb}<span class="art-check" aria-hidden="true"><input class="art-check-input" type="checkbox" tabindex="-1"></span></div>`;
 }
 
 async function translateNewTitles() {
@@ -320,4 +327,75 @@ function safeUrl(url) {
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return '#';
     return u.href.replace(/"/g,'%22').replace(/'/g,'%27');
   } catch { return '#'; }
+}
+
+function cssEsc(s) {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(String(s));
+  return String(s).replace(/(["\\])/g, '\\$1');
+}
+
+function toggleSources(row) {
+  const panel = row.querySelector('.art-sources');
+  if (!panel) return;
+  const open = panel.hidden;
+  panel.hidden = !open;
+  row.classList.toggle('expanded', open);
+}
+
+function renderSources(sources) {
+  const list = Array.isArray(sources) ? sources : [];
+  return list.map((s, i) => {
+    const u = safeUrl(s.url || '#');
+    const t = esc(s.title || `Source ${i + 1}`);
+    const d = esc(s.domain || '');
+    const dt = fmtDate(s.seendate);
+    const meta = [d, dt].filter(Boolean).join(' · ');
+    return `<a class="art-source-link" href="${u}" target="_blank" rel="noopener noreferrer"><span class="art-source-title">${t}</span><span class="art-source-domain">${meta}</span></a>`;
+  }).join('');
+}
+
+function normalizeTitle(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sourceKey(a) {
+  if (a.domain) return String(a.domain).toLowerCase();
+  try { return new URL(a.url || '').hostname.toLowerCase(); } catch { return String(a.url || '').toLowerCase(); }
+}
+
+function consolidateArticles(articles) {
+  const groups = new Map();
+  const ordered = [];
+  for (const a of articles) {
+    const key = normalizeTitle(a.title);
+    if (!key) {
+      ordered.push({ ...a, sourceCount: 1 });
+      continue;
+    }
+    let g = groups.get(key);
+    if (!g) {
+      g = { representative: a, sourceMap: new Map([[sourceKey(a), a]]) };
+      groups.set(key, g);
+      ordered.push(g);
+      continue;
+    }
+    const sk = sourceKey(a);
+    if (!g.sourceMap.has(sk)) g.sourceMap.set(sk, a);
+  }
+  return ordered.map(item => {
+    if (item.representative) {
+      const sources = [...item.sourceMap.values()];
+      return {
+        ...item.representative,
+        sourceCount: Math.max(1, sources.length),
+        sources,
+      };
+    }
+    return { ...item, sources: [item], sourceCount: 1 };
+  });
 }
