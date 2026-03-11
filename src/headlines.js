@@ -1,34 +1,33 @@
 import { buildArtListUrl } from './query.js';
 
 const CACHE_TTL        = 10 * 60 * 1000;
-const ATTEMPT_TIMEOUTS = [8000, 12000, 18000]; // 3 attempts: ~38s total budget
+const ATTEMPT_TIMEOUTS = [8000, 12000, 18000];
 
 const _articleCache = new Map();
 
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
 let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
 let _translateEnabled = true;
+let _translateLanguage = 'en';
 let _countryFilterKey = '', _countryFilterLabel = '';
-let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null, _onRenderCallback = null;
+let _selectMode = false, _selectedUrls = new Set(), _onSelectionChange = null, _onRenderCallback = null, _onTranslateCallback = null;
 let _filteredArticles = [];
 let _displayArticles = [];
 let _mapArticles = [];
 const _titleCache = new Map();
 
-// ─ fetch state ─
-let _cancelCtrl = null;   // AbortController for the current in-flight fetch
+let _cancelCtrl = null;
 
 const el = id => document.getElementById(id);
 
-function getCached(query) {
-  const c = _articleCache.get(query);
+function getCached(query, timespan) {
+  const c = _articleCache.get(query + '|' + timespan);
   if (!c) return null;
-  if (Date.now() - c.ts > CACHE_TTL) { _articleCache.delete(query); return null; }
+  if (Date.now() - c.ts > CACHE_TTL) { _articleCache.delete(query + '|' + timespan); return null; }
   return c.articles;
 }
 
 async function attemptFetch(url, timeoutMs) {
-  // fresh controller each attempt
   _cancelCtrl = new AbortController();
   const tid = setTimeout(() => _cancelCtrl.abort('timeout'), timeoutMs);
   try {
@@ -42,18 +41,16 @@ async function attemptFetch(url, timeoutMs) {
 export async function fetchAndRender(query, timespan) {
   _currentQuery = query; _currentTimespan = timespan; _visibleCount = _pageSize;
 
-  const cached = getCached(query);
+  const cached = getCached(query, timespan);
   if (cached) { _allArticles = cached; renderFiltered(); return; }
 
-  // Immediately show loading feedback while waiting on network.
   setState('loading');
 
-  // Wire up Cancel button
   const cancelBtn = document.getElementById('fetchCancelBtn');
   const onCancel = () => { _cancelCtrl?.abort('user'); };
   cancelBtn?.addEventListener('click', onCancel, { once: true });
 
-  const url = buildArtListUrl(query, '30d', 250);
+  const url = buildArtListUrl(query, timespan, 250);
   let resp = null, cancelled = false;
 
   for (let i = 0; i < ATTEMPT_TIMEOUTS.length; i++) {
@@ -81,7 +78,7 @@ export async function fetchAndRender(query, timespan) {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _allArticles = data.articles || [];
-    _articleCache.set(query, { articles: _allArticles, ts: Date.now() });
+    _articleCache.set(query + '|' + timespan, { articles: _allArticles, ts: Date.now() });
     renderFiltered();
   } catch (err) {
     setState('error', err.message);
@@ -95,10 +92,14 @@ export function setSortOrder(order) {
   _sortOrder = order; _visibleCount = _pageSize; renderFiltered();
 }
 export function loadMore() { _visibleCount += _pageSize; renderFiltered(); }
-export function hasCachedData(query) { return getCached(query) !== null; }
+export function hasCachedData(query, timespan) { return getCached(query, timespan) !== null; }
 export function setTranslateEnabled(enabled) {
   _translateEnabled = enabled;
   if (enabled && _allArticles.length) renderFiltered();
+}
+export function setTranslateLanguage(language) {
+  _translateLanguage = String(language || 'en').trim().toLowerCase() || 'en';
+  if (_allArticles.length) renderFiltered();
 }
 export function toggleSelectMode(on) {
   _selectMode = on ?? !_selectMode;
@@ -142,6 +143,7 @@ export function getSelectedArticles() {
 }
 export function setSelectionChangeCallback(fn) { _onSelectionChange = fn; }
 export function setOnRenderCallback(fn) { _onRenderCallback = fn; }
+export function setOnTranslateCallback(fn) { _onTranslateCallback = fn; }
 export function getFilteredArticles() { return _filteredArticles; }
 export function getDisplayArticles() { return _displayArticles; }
 export function getMapArticles() { return _mapArticles; }
@@ -195,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindExpandHandler('hybridHeadlines');
 });
 
-function renderFiltered() {
+async function renderFiltered() {
   const cutoff = timespanToMs(_currentTimespan), now = Date.now();
   let arts = _allArticles.filter(a => { const d = parseDate(a.seendate); return d && (now - d) <= cutoff; });
   _mapArticles = arts.slice();
@@ -219,7 +221,7 @@ function renderFiltered() {
   if (cnt) cnt.textContent = `${_displayArticles.length.toLocaleString()} article${_displayArticles.length === 1 ? '' : 's'}${countryLabel}${cacheLabel}`;
   const wrap = el('hlLoadMoreWrap');
   if (wrap) wrap.style.display = _visibleCount < _displayArticles.length ? 'flex' : 'none';
-  if (_translateEnabled) translateNewTitles();
+  if (_translateEnabled) await translateNewTitles();
   _onRenderCallback?.(_filteredArticles);
 }
 
@@ -242,20 +244,23 @@ function articleRow(art) {
   const url     = safeUrl(art.url || '#');
   const domain  = esc(art.domain || '');
   const country = esc(art.sourcecountry || '');
-  const lang    = esc(art.language || '');
+  const sourceLanguage = String(art.language || '');
+  const lang    = esc(sourceLanguage);
   const date    = fmtDate(art.seendate);
   const sourceCount = Number(art.sourceCount || 1);
-  const isEn    = !lang || lang.toLowerCase() === 'english';
+  const isEnglishSource = !sourceLanguage || sourceLanguage.toLowerCase() === 'english';
   const meta    = [country, domain].filter(Boolean).join(' · ');
-  const cached  = _titleCache.get(art.title);
+  const cacheKey = titleCacheKey(art.title);
+  const cached  = _titleCache.get(cacheKey);
   const display = cached ? esc(cached) : title;
-  const origAttr = (!isEn && !cached) ? ` data-orig="${title}"` : '';
+  const shouldTranslate = _translateEnabled && shouldTranslateTitle(sourceLanguage);
+  const origAttr = (shouldTranslate && !cached) ? ` data-orig="${title}"` : '';
   const imgUrl  = art.socialimage ? safeUrl(art.socialimage) : '';
   const thumb   = imgUrl && imgUrl !== '#' ? `<span class="art-thumb"><img src="${imgUrl}" loading="lazy" alt="" onerror="this.closest('.art-thumb').style.display='none'"></span>` : '';
   const sourcePill = sourceCount > 1
     ? `<button class="art-source-pill" type="button" aria-label="Show ${sourceCount} sources">${sourceCount} sources</button>`
     : '';
-  const langLine = !isEn ? `<span class="art-row-submeta"><span class="art-lang">${lang}</span></span>` : '';
+  const langLine = !isEnglishSource ? `<span class="art-row-submeta"><span class="art-lang">${lang}</span></span>` : '';
   const titleBlock = sourceCount > 1
     ? `<button class="art-title art-title-btn" type="button"${origAttr}>${display}</button>`
     : `<a class="art-title art-title-link" href="${url}" target="_blank" rel="noopener noreferrer"${origAttr}>${display}</a>`;
@@ -271,17 +276,22 @@ async function translateNewTitles() {
     ...collectPendingTitles('hybridHeadlines'),
   ];
   if (!pending.length) return;
-  const unique = [...new Set(pending.map(s => s.dataset.orig).filter(t => !_titleCache.has(t)))];
+  const unique = [...new Set(pending.map(s => s.dataset.orig).filter(t => !_titleCache.has(titleCacheKey(t))))];
   const BATCH = 8;
+  if (unique.length) _onTranslateCallback?.('start');
   for (let i = 0; i < unique.length; i += BATCH) {
     await Promise.all(unique.slice(i, i + BATCH).map(async t => {
-      try { const r = await gtxTranslate(t); if (r) _titleCache.set(t, r); } catch {}
+      try {
+        const r = await gtxTranslate(t, _translateLanguage);
+        if (r) _titleCache.set(titleCacheKey(t), r);
+      } catch {}
     }));
   }
   pending.forEach(s => {
-    const tr = _titleCache.get(s.dataset.orig);
+    const tr = _titleCache.get(titleCacheKey(s.dataset.orig));
     if (tr) { s.textContent = tr; s.removeAttribute('data-orig'); }
   });
+  _onTranslateCallback?.('end');
 }
 
 function collectPendingTitles(containerId) {
@@ -290,11 +300,21 @@ function collectPendingTitles(containerId) {
   return [...container.querySelectorAll('.art-title[data-orig]')];
 }
 
-async function gtxTranslate(text) {
-  const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+async function gtxTranslate(text, targetLanguage = 'en') {
+  const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(text)}`);
   if (!r.ok) return null;
   const j = await r.json();
   return Array.isArray(j?.[0]) ? j[0].map(s => s[0] || '').join('') : null;
+}
+
+function shouldTranslateTitle(sourceLanguage) {
+  const normalizedSource = String(sourceLanguage || '').trim().toLowerCase();
+  if (_translateLanguage === 'en') return !!normalizedSource && normalizedSource !== 'english';
+  return true;
+}
+
+function titleCacheKey(title) {
+  return `${_translateLanguage}|${String(title || '')}`;
 }
 
 function setState(state, msg = '') {

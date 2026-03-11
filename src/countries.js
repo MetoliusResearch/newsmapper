@@ -1,4 +1,3 @@
-// Country centroids — keyed by lowercase GDELT sourcecountry name → [lat, lng]
 export const COUNTRY_COORDS = {
   'afghanistan': [33.93, 67.71],
   'albania': [41.15, 20.17],

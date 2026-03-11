@@ -1,10 +1,9 @@
 import { buildQuery } from './query.js';
-import './styles.css';
 import {
   fetchAndRender, filterByTimespan, setSortOrder, loadMore, hasCachedData,
-  setTranslateEnabled, toggleSelectMode, clearSelection, selectAll,
+  setTranslateEnabled, setTranslateLanguage, toggleSelectMode, clearSelection, selectAll,
   getSelectedArticles, setSelectionChangeCallback,
-  setOnRenderCallback,
+  setOnRenderCallback, setOnTranslateCallback,
   setCountryFilter, getCountryFilter,
   getDisplayArticles, buildArticleRowsHtml, getMapArticles,
 } from './headlines.js';
@@ -14,6 +13,9 @@ import { COUNTRY_COORDS } from './countries.js';
 let currentView = 'hybrid', currentTimespan = '7d';
 let translateEnabled = true, lastBuiltQuery = '', selectModeOn = false;
 const LS_KEY = 'nm_default';
+let countryNames = [];
+let activeCountrySuggestion = -1;
+let _hybridStatusActive = false;
 
 const el  = id  => document.getElementById(id);
 const qsa = sel => [...document.querySelectorAll(sel)];
@@ -26,17 +28,80 @@ function countryLabelFromKey(key) {
     .join(' ');
 }
 
-function hydrateCountrySuggestions() {
-  const list = el('countrySuggestions');
-  if (!list) return;
-  const names = [...new Set(Object.keys(COUNTRY_COORDS).map(countryLabelFromKey))].sort((a, b) => a.localeCompare(b));
-  list.innerHTML = names.map(name => `<option value="${name}"></option>`).join('');
+function hydrateCountrySelect() {
+  countryNames = [...new Set(Object.keys(COUNTRY_COORDS).map(countryLabelFromKey))].sort((a, b) => a.localeCompare(b));
+}
+
+function hideCountrySuggestions() {
+  const box = el('countrySuggest');
+  if (!box) return;
+  box.hidden = true;
+  box.innerHTML = '';
+  activeCountrySuggestion = -1;
+}
+
+function applyCountrySuggestion(value) {
+  const input = el('countryInput');
+  if (!input) return;
+  input.value = value;
+  hideCountrySuggestions();
+}
+
+function highlightCountrySuggestion(index) {
+  const box = el('countrySuggest');
+  if (!box || box.hidden) return;
+  const items = [...box.querySelectorAll('.country-suggest-item')];
+  items.forEach((node, i) => node.classList.toggle('active', i === index));
+}
+
+function showCountrySuggestions(query) {
+  const box = el('countrySuggest');
+  if (!box) return;
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) { hideCountrySuggestions(); return; }
+  const matches = countryNames.filter(name => name.toLowerCase().startsWith(q))
+    .concat(countryNames.filter(name => !name.toLowerCase().startsWith(q) && name.toLowerCase().includes(q)))
+    .slice(0, 12);
+  if (!matches.length) { hideCountrySuggestions(); return; }
+  activeCountrySuggestion = -1;
+  box.innerHTML = matches.map((name, idx) => `<button type="button" class="country-suggest-item" data-idx="${idx}" data-country="${esc(name)}">${esc(name)}</button>`).join('');
+  box.hidden = false;
+}
+
+function moveCountrySuggestion(delta) {
+  const box = el('countrySuggest');
+  if (!box || box.hidden) return;
+  const items = [...box.querySelectorAll('.country-suggest-item')];
+  if (!items.length) return;
+  activeCountrySuggestion = (activeCountrySuggestion + delta + items.length) % items.length;
+  highlightCountrySuggestion(activeCountrySuggestion);
+}
+
+function chooseActiveCountrySuggestion() {
+  const box = el('countrySuggest');
+  if (!box || box.hidden) return false;
+  const items = [...box.querySelectorAll('.country-suggest-item')];
+  if (!items.length) return false;
+  const idx = activeCountrySuggestion >= 0 ? activeCountrySuggestion : 0;
+  const item = items[idx];
+  if (!item) return false;
+  applyCountrySuggestion(item.dataset.country || item.textContent || '');
+  return true;
 }
 
 function showToast(msg, ms = 2500) {
   const t = el('toast'); if (!t) return;
   t.textContent = msg; t.classList.add('toast-visible');
   setTimeout(() => t.classList.remove('toast-visible'), ms);
+}
+
+function setHybridStatus(state) {
+  const container = el('hybridHeadlines');
+  if (!container) return;
+  _hybridStatusActive = !!state;
+  if (!state) return;
+  const msg = state === 'downloading' ? 'Downloading\u2026' : 'Translating\u2026';
+  container.innerHTML = `<div class="hybrid-status"><div class="spinner"></div><span class="hybrid-status-msg">${msg}</span></div>`;
 }
 
 function setSearchLoading(on) {
@@ -50,9 +115,10 @@ function setSearchLoading(on) {
 async function runQuery(query, timespan) {
   setSearchLoading(true);
   try {
-    if (hasCachedData(query)) {
+    if (hasCachedData(query, timespan)) {
       filterByTimespan(timespan);
     } else {
+      setHybridStatus('downloading');
       await fetchAndRender(query, timespan);
     }
   } finally {
@@ -70,11 +136,15 @@ function switchView(view) {
     const on = p.id === `view${view[0].toUpperCase()}${view.slice(1)}`;
     p.classList.toggle('active', on);
   });
+  const th = el('toolbarHeadlines'), thh = el('toolbarHybrid');
+  if (th)  th.style.display  = view === 'headlines' ? '' : 'none';
+  if (thh) thh.style.display = view === 'hybrid'    ? '' : 'none';
   if (view === 'hybrid') showHybrid();
   positionSelBar();
 }
 
 function renderHybridList(articles) {
+  _hybridStatusActive = false;
   const container = el('hybridHeadlines');
   if (!container) return;
   if (!articles.length) {
@@ -126,6 +196,14 @@ function applyTranslate(enabled) {
   el('translateToggleBtn')?.setAttribute('aria-pressed', String(enabled));
   el('translateToggleBtn')?.classList.toggle('active', enabled);
   const lbl = el('translateBtnLabel'); if (lbl) lbl.textContent = enabled ? 'EN' : 'OFF';
+}
+
+function applyTranslationLanguage(language) {
+  const normalized = String(language || 'en').trim().toLowerCase() || 'en';
+  const select = el('languageSelect');
+  if (select) select.value = normalized;
+  setTranslateLanguage(normalized);
+  applyTranslate(true);
 }
 
 function readFormParams() {
@@ -259,7 +337,6 @@ function exportSelectedHtml() {
 }
 
 function fullPageReset() {
-  // Clean path navigation guarantees no stale query params or in-memory state survive.
   const cleanUrl = `${window.location.origin}${window.location.pathname}`;
   window.location.assign(cleanUrl);
 }
@@ -267,6 +344,7 @@ function fullPageReset() {
 function wireEvents() {
   qsa('.view-btn[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
   el('translateToggleBtn')?.addEventListener('click', () => applyTranslate(!translateEnabled));
+  el('languageSelect')?.addEventListener('change', e => applyTranslationLanguage(e.target.value));
   qsa('.time-btn').forEach(b => b.addEventListener('click', () => {
     const ts = b.dataset.timespan; setActiveTimespanBtn(ts);
     const hs = el('hybridSortSelect'); if (hs) hs.value = el('hlSortSelect')?.value || 'date-desc';
@@ -299,7 +377,26 @@ function wireEvents() {
   setSelectionChangeCallback(count => updateSelBar(count));
   el('searchBtn')?.addEventListener('click', () => { void doSearch(); });
   el('resetBtn')?.addEventListener('click', fullPageReset);
-  el('countryInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') void doSearch(); });
+  const countryInput = el('countryInput');
+  const countrySuggest = el('countrySuggest');
+  countryInput?.addEventListener('input', e => showCountrySuggestions(e.target.value));
+  countryInput?.addEventListener('focus', e => { if (e.target.value) showCountrySuggestions(e.target.value); });
+  countryInput?.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveCountrySuggestion(1); return; }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); moveCountrySuggestion(-1); return; }
+    if (e.key === 'Escape')    { hideCountrySuggestions(); return; }
+    if (e.key === 'Enter') {
+      if (chooseActiveCountrySuggestion()) e.preventDefault();
+      void doSearch();
+    }
+  });
+  countryInput?.addEventListener('blur', () => setTimeout(hideCountrySuggestions, 150));
+  countrySuggest?.addEventListener('mousedown', e => e.preventDefault());
+  countrySuggest?.addEventListener('click', e => {
+    const btn = e.target.closest('.country-suggest-item');
+    if (!btn) return;
+    applyCountrySuggestion(btn.dataset.country || btn.textContent || '');
+  });
   el('hlSortSelect')?.addEventListener('change', e => {
     const value = e.target.value;
     const hs = el('hybridSortSelect'); if (hs) hs.value = value;
@@ -332,22 +429,24 @@ function isPageReload() {
   if (Array.isArray(nav) && nav[0] && typeof nav[0].type === 'string') {
     return nav[0].type === 'reload';
   }
-  // Legacy fallback.
   return typeof performance.navigation !== 'undefined' && performance.navigation.type === 1;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  hydrateCountrySuggestions();
-  wireEvents(); applyTranslate(true);
+  hydrateCountrySelect();
+  wireEvents();
+  applyTranslationLanguage(el('languageSelect')?.value || 'en');
   setMapCountryClickHandler(({ country }) => applyCountryFilterFromMap(country));
   setOnRenderCallback(articles => {
     updateViewStatus('hybrid', getDisplayArticles().length);
     if (currentView === 'hybrid') { updateHybridMap(getMapArticles(), getCountryFilter()); renderHybridList(getDisplayArticles()); }
   });
+  setOnTranslateCallback(state => {
+    if (state === 'start' && _hybridStatusActive) setHybridStatus('translating');
+  });
   setupPullToRefresh();
   switchView('hybrid');
   if (isPageReload()) {
-    // Reload acts as a hard reset: clear URL params and skip auto-restores.
     const cleanUrl = `${window.location.origin}${window.location.pathname}`;
     if (window.location.search) window.history.replaceState({}, '', cleanUrl);
     window.addEventListener('resize', positionSelBar, { passive: true });

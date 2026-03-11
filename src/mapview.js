@@ -101,11 +101,10 @@ function createMapInstance() {
       } else {
         circle.bindTooltip(
           `<div class="map-dot-selected-label"><strong>${h(info.name)}</strong><span>${count} article${count === 1 ? '' : 's'}</span></div>`,
-          { direction: 'top', sticky: true, className: 'map-dot-selected-wrap', opacity: 1 }
+          { direction: 'center', sticky: true, className: 'map-dot-selected-wrap', opacity: 1 }
         );
       }
       circle.on('click', () => {
-        // Keep current zoom/center when click-driven filtering updates markers.
         preserveViewNextUpdate = true;
         onCountryClick?.({ country: info.name, key, count, articles: info.articles.slice() });
       });
@@ -145,7 +144,6 @@ export function setMapCountryClickHandler(handler) {
   _hybrid.setOnCountryClick(handler);
 }
 
-// ── helpers ──────────────────────────────────────────────────────────────────
 function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
 function h(s) {
   return String(s)

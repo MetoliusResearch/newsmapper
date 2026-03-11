@@ -45,7 +45,6 @@ export function buildQuery({ resource = '', region = '', country = '' } = {}) {
   if (rTerm) parts.push(rTerm);
   let loc = '';
   if (country) {
-    // Country overrides region so queries never combine both location scopes.
     const q = !country.startsWith('"') && (country.includes(' ') || country.includes('-')) ? `"${country}"` : country;
     loc = q;
   } else if (region && region !== 'Global') {
