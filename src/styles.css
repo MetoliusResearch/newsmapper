@@ -250,10 +250,10 @@ html, body {
 
 .search-btn {
   height: 34px;
-  padding: 0 1rem;
+  padding: 0 0.6rem;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
   border-radius: var(--radius-sm);
   background: var(--blue);
   color: #fff;
@@ -261,6 +261,7 @@ html, body {
   font-weight: 600;
   white-space: nowrap;
   transition: background var(--transition);
+  aspect-ratio: 1;
 }
 .search-btn:hover  { background: var(--blue-hover); }
 .search-btn:active { transform: translateY(1px); }

@@ -9,11 +9,34 @@ const _titleCache = new Map();
 
 const el = id => document.getElementById(id);
 
+async function fetchWithTimeout(url, timeoutMs = 5000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { signal: ctrl.signal });
+    return resp;
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
 export async function fetchAndRender(query, timespan) {
   _currentQuery = query; _currentTimespan = timespan; _visibleCount = _pageSize;
   setState('loading');
+  const url = buildArtListUrl(query, '30d', 250);
+  let resp;
   try {
-    const resp = await fetch(buildArtListUrl(query, '30d', 250));
+    resp = await fetchWithTimeout(url);
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      // Timed out — retry once
+      try { resp = await fetchWithTimeout(url); }
+      catch (err2) { setState('error', 'Request timed out after two attempts.'); return; }
+    } else {
+      setState('error', err.message); return;
+    }
+  }
+  try {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _allArticles = data.articles || [];
