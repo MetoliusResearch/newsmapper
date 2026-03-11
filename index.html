@@ -18,11 +18,10 @@
   <title>NewsMapper 2.0 — Natural Resources</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <script type="module" crossorigin src="./assets/index-s7UyIUeB.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-C7ILvz8j.css">
+  <script type="module" crossorigin src="./assets/index-CEU3ofS-.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-8Bk5fDpC.css">
 </head>
 <body>
-  <!-- Top navigation bar -->
   <header class="topbar">
     <div class="topbar-brand">
       <span class="topbar-logo">NM</span>
@@ -33,30 +32,108 @@
     </div>
     <span class="topbar-powered">powered by GDELT</span>
     <nav class="topbar-nav">
-      <button class="view-btn" data-view="headlines" title="Headlines view" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        <span class="view-btn-label">Headlines</span>
-      </button>
-      <button class="view-btn active" data-view="hybrid" title="Hybrid view (map + headlines)" aria-pressed="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="9" rx="2"/><rect x="2" y="13" width="20" height="9" rx="2"/></svg>
-        <span class="view-btn-label">Hybrid</span>
-      </button>
-      <button class="topbar-translate-btn" id="translateToggleBtn" title="Toggle auto-translate (English)" aria-pressed="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
-        <span id="translateBtnLabel">EN</span>
-      </button>
+      <label for="languageSelect" class="sr-only">Translate UI and headlines</label>
+      <select class="topbar-language-select" id="languageSelect" aria-label="Translate UI and headlines">
+        <option value="en" selected>EN 中</option>
+        <option value="es">SP</option>
+        <option value="pt">PT</option>
+        <option value="ru">RU</option>
+        <option value="zh-CN">中</option>
+      </select>
     </nav>
   </header>
 
-  <!-- Query builder panel -->
+  <main class="app-main" id="appMain">
+
+    <div class="view-panel" id="viewHeadlines" role="region" aria-label="Headlines">
+
+      <div class="hl-state" id="hlStatePlaceholder">
+        <div class="hl-state-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <p class="hl-state-msg">Select a resource and click <strong>Search</strong> to load headlines.</p>
+      </div>
+      <div class="hl-state" id="hlStateLoading" style="display:none;">
+        <div class="spinner"></div>
+        <p class="hl-state-msg" id="hlLoadingMsg">Fetching headlines…</p>
+        <button class="retry-btn" id="fetchCancelBtn" style="margin-top:.25rem;">Cancel</button>
+      </div>
+      <div class="hl-state" id="hlStateEmpty" style="display:none;">
+        <div class="hl-state-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+        <p class="hl-state-msg">No articles found. Try a different query or longer timespan.</p>
+      </div>
+      <div class="hl-state" id="hlStateError" style="display:none;">
+        <div class="hl-state-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c00" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <p class="hl-state-msg" id="hlStateErrorMsg">Failed to load headlines.</p>
+        <button class="retry-btn" id="hlRetryBtn">Try again</button>
+      </div>
+
+      <div class="hl-grid" id="hlGrid" style="display:none;"></div>
+
+      <div class="hl-loadmore-wrap" id="hlLoadMoreWrap" style="display:none;">
+        <button class="loadmore-btn" id="hlLoadMoreBtn">Load more</button>
+      </div>
+    </div>
+
+    <div class="view-panel active" id="viewHybrid" role="region" aria-label="Hybrid map + headlines">
+      <button class="map-toggle-btn" id="mapToggleBtn" type="button" aria-pressed="false" title="Hide map">Hide map</button>
+      <div id="hybridMapContainer"></div>
+      <div id="hybridHeadlines" class="hybrid-headlines"></div>
+    </div>
+
+  </main>
+
+  <div class="bottom-toolbar-area">
+    <div class="hl-toolbar" id="toolbarHeadlines" style="display:none;">
+      <span class="hl-count" id="hlCount"></span>
+      <span class="aqb-default-badge" id="defaultBadge" style="display:none;" aria-label="Loaded from saved default">★ default</span>
+      <button class="aqb-save-default" id="setDefaultBtn" title="Save current query as default" aria-label="Save as default">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        Set default
+      </button>
+      <div class="hl-filter-wrap">
+        <label for="hlSortSelect" class="sr-only">Sort headlines by</label>
+        <select id="hlSortSelect" class="hl-sort-select" aria-label="Sort headlines">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+        </select>
+      </div>
+      <button class="hl-select-btn" id="hlSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Select
+      </button>
+    </div>
+    <div class="hl-toolbar hybrid-toolbar" id="toolbarHybrid">
+      <span class="hl-count" id="hybridHlCount"></span>
+      <button class="aqb-save-default" id="hybridSetDefaultBtn" title="Save current query as default" aria-label="Save as default">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        Set default
+      </button>
+      <div class="hl-filter-wrap">
+        <label for="hybridSortSelect" class="sr-only">Sort hybrid headlines by</label>
+        <select id="hybridSortSelect" class="hl-sort-select" aria-label="Sort hybrid headlines">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+        </select>
+      </div>
+      <button class="hl-select-btn" id="hybridSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Select
+      </button>
+    </div>
+  </div>
+
   <section class="query-panel" id="queryPanel" aria-label="Search query">
     <div class="query-panel-inner">
-      <!-- Resource selector -->
       <div class="qp-group">
-        <label class="qp-label" for="resourceSelect">Resource</label>
+        <label class="qp-label" id="lblResource" for="resourceSelect">Resource</label>
         <div class="qp-select-wrap">
           <select id="resourceSelect" class="qp-select" aria-label="Select resource">
-            <option value="">All resources</option>
+            <option value="">— Select —</option>
             <optgroup label="Fossil Fuels">
               <option value="Oil">Oil</option>
               <option value="LNG">LNG / Natural Gas</option>
@@ -87,12 +164,11 @@
 
       <div class="qp-and" aria-hidden="true">AND</div>
 
-      <!-- Region selector -->
       <div class="qp-group">
-        <label class="qp-label" for="regionSelect">Region</label>
+        <label class="qp-label" id="lblRegion" for="regionSelect">Region</label>
         <div class="qp-select-wrap">
           <select id="regionSelect" class="qp-select" aria-label="Select region">
-            <option value="">Global</option>
+            <option value="">— Select —</option>
             <option value="Africa">Africa</option>
             <option value="Asia">Asia</option>
             <option value="Europe">Europe</option>
@@ -107,18 +183,16 @@
 
       <div class="qp-or" aria-hidden="true">OR</div>
 
-      <!-- Country free text -->
       <div class="qp-group qp-group-country">
-        <label class="qp-label" for="countryInput">Country</label>
+        <label class="qp-label" id="lblCountry" for="countryInput">Country</label>
         <div class="qp-select-wrap">
-          <input id="countryInput" class="qp-select" type="text" list="countrySuggestions" placeholder="Global" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Country filter" />
+          <input id="countryInput" class="qp-select" type="text" placeholder="— Type Name —" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Select country" aria-haspopup="listbox" />
+          <div id="countrySuggest" class="country-suggest" role="listbox" aria-label="Country suggestions" hidden></div>
         </div>
-        <datalist id="countrySuggestions"></datalist>
       </div>
 
-      <!-- Time range -->
       <div class="qp-group qp-group-time">
-        <label class="qp-label">Timespan</label>
+        <label class="qp-label" id="lblTimespan">Timespan</label>
         <div class="qp-time-btns" role="group" aria-label="Select timespan">
           <button class="time-btn" data-timespan="1d">1d</button>
           <button class="time-btn active" data-timespan="7d" aria-pressed="true">7d</button>
@@ -126,109 +200,23 @@
         </div>
       </div>
 
-      <!-- Search button -->
       <div class="qp-group qp-group-search">
-        <button class="search-btn" id="searchBtn" type="button" title="Search" aria-label="Search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </button>
-        <button class="reset-btn" id="resetBtn" type="button" title="Full reset" aria-label="Full reset">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M20.49 15a9 9 0 1 1 .51-9"/></svg>
-        </button>
+        <span class="qp-label" id="lblSearch">Search</span>
+        <div class="qp-search-actions">
+          <button class="search-btn" id="searchBtn" type="button" title="Search" aria-label="Search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button class="reset-btn" id="resetBtn" type="button" title="Full reset" aria-label="Full reset">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M20.49 15a9 9 0 1 1 .51-9"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
   </section>
 
-  <!-- Main content area — swapped per view -->
-  <main class="app-main" id="appMain">
-
-    <!-- ── HEADLINES VIEW ─────────────────────────────────── -->
-    <div class="view-panel" id="viewHeadlines" role="region" aria-label="Headlines">
-      <div class="hl-toolbar">
-        <span class="hl-count" id="hlCount"></span>
-        <span class="aqb-default-badge" id="defaultBadge" style="display:none;" aria-label="Loaded from saved default">★ default</span>
-        <button class="aqb-save-default" id="setDefaultBtn" title="Save current query as default" aria-label="Save as default">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-          Set default
-        </button>
-        <div class="hl-filter-wrap">
-          <label for="hlSortSelect" class="sr-only">Sort headlines by</label>
-          <select id="hlSortSelect" class="hl-sort-select" aria-label="Sort headlines">
-            <option value="date-desc">Newest first</option>
-            <option value="date-asc">Oldest first</option>
-          </select>
-        </div>
-        <button class="hl-select-btn" id="hlSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Select
-        </button>
-      </div>
-
-      <!-- Empty / loading / error states -->
-      <div class="hl-state" id="hlStatePlaceholder">
-        <div class="hl-state-icon">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0c1b50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        </div>
-        <p class="hl-state-msg">Select a resource and click <strong>Search</strong> to load headlines.</p>
-      </div>
-      <div class="hl-state" id="hlStateLoading" style="display:none;">
-        <div class="spinner"></div>
-        <p class="hl-state-msg" id="hlLoadingMsg">Fetching headlines…</p>
-        <button class="retry-btn" id="fetchCancelBtn" style="margin-top:.25rem;">Cancel</button>
-      </div>
-      <div class="hl-state" id="hlStateEmpty" style="display:none;">
-        <div class="hl-state-icon">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </div>
-        <p class="hl-state-msg">No articles found. Try a different query or longer timespan.</p>
-      </div>
-      <div class="hl-state" id="hlStateError" style="display:none;">
-        <div class="hl-state-icon">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c00" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <p class="hl-state-msg" id="hlStateErrorMsg">Failed to load headlines.</p>
-        <button class="retry-btn" id="hlRetryBtn">Try again</button>
-      </div>
-
-      <!-- Article grid -->
-      <div class="hl-grid" id="hlGrid" style="display:none;"></div>
-
-      <!-- Load more -->
-      <div class="hl-loadmore-wrap" id="hlLoadMoreWrap" style="display:none;">
-        <button class="loadmore-btn" id="hlLoadMoreBtn">Load more</button>
-      </div>
-    </div>
-
-    <!-- ── HYBRID VIEW ──────────────────────────────────────── -->
-    <div class="view-panel active" id="viewHybrid" role="region" aria-label="Hybrid map + headlines">
-      <div class="hl-toolbar hybrid-toolbar">
-        <span class="hl-count" id="hybridHlCount"></span>
-        <button class="aqb-save-default" id="hybridSetDefaultBtn" title="Save current query as default" aria-label="Save as default">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-          Set default
-        </button>
-        <div class="hl-filter-wrap">
-          <label for="hybridSortSelect" class="sr-only">Sort hybrid headlines by</label>
-          <select id="hybridSortSelect" class="hl-sort-select" aria-label="Sort hybrid headlines">
-            <option value="date-desc">Newest first</option>
-            <option value="date-asc">Oldest first</option>
-          </select>
-        </div>
-        <button class="hl-select-btn" id="hybridSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Select
-        </button>
-      </div>
-      <div id="hybridMapContainer"></div>
-      <div id="hybridHeadlines" class="hybrid-headlines"></div>
-    </div>
-
-  </main>
-
-  <!-- Toast notification -->
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <!-- Selection action bar (slides up when articles are selected) -->
   <div class="sel-bar" id="selBar" role="toolbar" aria-label="Selection actions">
     <span class="sel-bar-count" id="selBarCount">0 selected</span>
     <div class="sel-bar-actions">
