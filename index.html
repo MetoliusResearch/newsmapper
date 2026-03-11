@@ -18,8 +18,8 @@
   <title>NewsMapper 2.0 — Natural Resources</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <script type="module" crossorigin src="./assets/index-CSBJVdwq.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DKt4ueK_.css">
+  <script type="module" crossorigin src="./assets/index-BNUFtVnV.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BiXWRah_.css">
 </head>
 <body>
   <!-- Top navigation bar -->
@@ -166,7 +166,11 @@
       </div>
       <div class="hl-state" id="hlStateLoading" style="display:none;">
         <div class="spinner"></div>
-        <p class="hl-state-msg">Fetching headlines…</p>
+        <p class="hl-state-msg" id="hlLoadingMsg">Fetching headlines…</p>
+        <div class="fetch-progress-wrap">
+          <div class="fetch-progress-bar" id="fetchProgressBar"></div>
+        </div>
+        <p class="fetch-countdown" id="fetchCountdown"></p>
       </div>
       <div class="hl-state" id="hlStateEmpty" style="display:none;">
         <div class="hl-state-icon">
