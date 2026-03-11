@@ -12,7 +12,7 @@
     style-src 'self' https://unpkg.com 'unsafe-inline' https://translate.google.com https://translate.googleapis.com https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
     img-src 'self' https: data: blob:;
-    connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://translate.googleapis.com https://translate.google.com https://*.tile.openstreetmap.org;
+    connect-src 'self' https://api.gdeltproject.org https://www.gdeltproject.org https://translate.googleapis.com https://translate.google.com https://*.tile.openstreetmap.org https://server.arcgisonline.com;
     frame-src https://translate.googleapis.com;
   " />
   <title>NewsMapper 2.0 — Natural Resources</title>
@@ -196,12 +196,10 @@
       </div>
     </div>
 
-    <!-- ── HYBRID VIEW (placeholder) ─────────────────────── -->
+    <!-- ── HYBRID VIEW ──────────────────────────────────────── -->
     <div class="view-panel" id="viewHybrid" role="region" aria-label="Hybrid map + headlines">
-      <div class="coming-soon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><rect x="2" y="2" width="20" height="9" rx="2"/><rect x="2" y="13" width="20" height="9" rx="2"/></svg>
-        <p>Hybrid view — coming in the next sprint</p>
-      </div>
+      <div id="hybridMapContainer"></div>
+      <div id="hybridHeadlines" class="hybrid-headlines"></div>
     </div>
 
     <!-- ── MAP VIEW ─────────────────────────────────────────── -->

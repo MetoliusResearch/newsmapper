@@ -5,7 +5,7 @@ import {
   getSelectedArticles, setSelectionChangeCallback,
   getFilteredArticles, setOnRenderCallback,
 } from './headlines.js';
-import { initMap, updateMap } from './mapview.js';
+import { initMap, updateMap, initHybridMap, updateHybridMap } from './mapview.js';
 
 let currentView = 'headlines', currentTimespan = '7d';
 let translateEnabled = true, lastBuiltQuery = '', selectModeOn = false;
@@ -31,11 +31,43 @@ function switchView(view) {
     p.classList.toggle('active', on);
   });
   if (view === 'map') showMap();
+  if (view === 'hybrid') showHybrid();
 }
 
 function showMap() {
   initMap('mapContainer');
   updateMap(getFilteredArticles());
+}
+
+function renderHybridList(articles) {
+  const container = el('hybridHeadlines');
+  if (!container) return;
+  if (!articles.length) {
+    container.innerHTML = '<p class="hybrid-empty">No articles — run a search first.</p>';
+    return;
+  }
+  container.innerHTML = articles.map(a => {
+    const title = a.title || 'Untitled';
+    const meta  = [a.sourcecountry, a.domain,
+                   a.seendatetime ? a.seendatetime.slice(0, 8).replace(/^(\d{4})(\d{2})(\d{2})$/, '$2/$3/$1') : '']
+                  .filter(Boolean).join(' · ');
+    let href = '#';
+    try {
+      const u = new URL(a.url);
+      if (u.protocol === 'http:' || u.protocol === 'https:') href = u.href.replace(/"/g, '%22');
+    } catch { /* keep '#' */ }
+    return `<a class="hybrid-art" href="${href}" target="_blank" rel="noopener noreferrer">
+      <span class="hybrid-art-title">${esc(title)}</span>
+      <span class="hybrid-art-meta">${esc(meta)}</span>
+    </a>`;
+  }).join('');
+}
+
+function showHybrid() {
+  initHybridMap('hybridMapContainer');
+  const arts = getFilteredArticles();
+  updateHybridMap(arts);
+  renderHybridList(arts);
 }
 
 function applyTranslate(enabled) {
@@ -197,7 +229,10 @@ function setupPullToRefresh() {
 
 document.addEventListener('DOMContentLoaded', () => {
   wireEvents(); applyTranslate(true);
-  setOnRenderCallback(articles => { if (currentView === 'map') updateMap(articles); });
+  setOnRenderCallback(articles => {
+    if (currentView === 'map') updateMap(articles);
+    if (currentView === 'hybrid') { updateHybridMap(articles); renderHybridList(articles); }
+  });
   setupPullToRefresh();
   restoreFromURL();
 });
