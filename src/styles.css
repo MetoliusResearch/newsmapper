@@ -998,6 +998,26 @@ html, body {
 
 #viewMap { position: relative; }
 
+.app-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 1rem;
+  background: var(--navy);
+  color: rgba(255,255,255,.45);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+.app-footer a {
+  color: rgba(255,255,255,.6);
+  text-decoration: none;
+}
+.app-footer a:hover {
+  color: rgba(255,255,255,.9);
+}
+
 #mapContainer {
   flex: 1;
   min-height: 0;
