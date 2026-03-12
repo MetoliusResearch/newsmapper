@@ -1388,7 +1388,7 @@ body { top: 0 !important; }
   }
 
   .qp-group-search {
-    flex: 0 0 auto;
+    flex: 1 1 100%;
     align-items: flex-start;
     align-self: flex-start;
     text-align: left;
