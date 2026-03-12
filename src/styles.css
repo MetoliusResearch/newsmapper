@@ -437,14 +437,22 @@ html, body {
   align-self: auto;
 }
 
+.qp-reset-col {
+  order: 99;
+  align-self: flex-end;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-bottom: 0;
+}
+
 .qp-group-search {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
   gap: 0.35rem;
-  flex: 1;
-  min-width: 120px;
+  flex-shrink: 0;
 }
 
 .qp-group-search .qp-label {
@@ -457,10 +465,6 @@ html, body {
   align-items: center;
   gap: 0.35rem;
   width: 100%;
-}
-
-.reset-btn-wrap {
-  margin-left: auto;
 }
 
 .reset-btn {
@@ -869,13 +873,13 @@ html, body {
 
 .hl-loadmore-wrap {
   flex-shrink: 0;
-  padding: 0.75rem 0 1rem;
+  padding: 0.45rem 0 0.65rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .loadmore-btn {
-  height: 34px;
+  height: 27px;
   padding: 0 1.3rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -1013,7 +1017,7 @@ html, body {
   height: 28px;
   padding: 0 1rem;
   background: var(--navy);
-  color: rgba(255,255,255,.45);
+  color: #fff;
   font-size: 0.72rem;
   letter-spacing: 0.01em;
 }
@@ -1380,16 +1384,23 @@ body { top: 0 !important; }
     position: relative;
   }
   
+  .qp-reset-col {
+    flex: 0 0 calc((100% - 0.7rem) / 3);
+    order: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
   .qp-group-time {
-    flex: 0 0 auto;
+    flex: 0 0 calc((100% - 0.7rem) / 3);
     align-items: flex-start;
     align-self: center;
     text-align: left;
   }
 
   .qp-group-search {
-    flex: 1 0 0;
-    min-width: 0;
+    flex: 0 0 calc((100% - 0.7rem) / 3);
     align-items: flex-start;
     align-self: center;
     text-align: left;
@@ -1402,9 +1413,10 @@ body { top: 0 !important; }
     width: 100%;
     min-width: 0;
   }
-  .qp-time-btns { width: auto; }
-  .qp-search-actions { width: 100%; justify-content: flex-start; }
-  .reset-btn-wrap { margin-left: auto; }
+  .qp-time-btns { width: 100%; justify-content: space-between; gap: 0; }
+  .time-btn { flex: 1; }
+  .qp-search-actions { width: 100%; }
+  .search-btn { width: 100%; }
   .qp-group-time .qp-label,
   .qp-group-search .qp-label { display: none; }
 
