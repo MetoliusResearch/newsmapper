@@ -387,7 +387,7 @@ html, body {
 .time-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 
 .search-btn {
-  width: 27px;
+  width: 81px;
   height: 27px;
   padding: 0;
   display: flex;
@@ -443,6 +443,8 @@ html, body {
   align-items: flex-start;
   text-align: left;
   gap: 0.35rem;
+  flex: 1;
+  min-width: 120px;
 }
 
 .qp-group-search .qp-label {
@@ -454,6 +456,11 @@ html, body {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  width: 100%;
+}
+
+.reset-btn-wrap {
+  margin-left: auto;
 }
 
 .reset-btn {
@@ -1396,6 +1403,7 @@ body { top: 0 !important; }
   }
   .qp-time-btns { width: auto; }
   .qp-search-actions { justify-content: flex-start; }
+  .reset-btn-wrap { margin-left: auto; }
   .qp-group-time .qp-label,
   .qp-group-search .qp-label { align-self: auto; }
 
