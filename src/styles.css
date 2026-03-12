@@ -1383,14 +1383,15 @@ body { top: 0 !important; }
   .qp-group-time {
     flex: 0 0 auto;
     align-items: flex-start;
-    align-self: flex-start;
+    align-self: center;
     text-align: left;
   }
 
   .qp-group-search {
-    flex: 1 1 100%;
+    flex: 1 0 0;
+    min-width: 0;
     align-items: flex-start;
-    align-self: flex-start;
+    align-self: center;
     text-align: left;
   }
 
@@ -1402,10 +1403,10 @@ body { top: 0 !important; }
     min-width: 0;
   }
   .qp-time-btns { width: auto; }
-  .qp-search-actions { justify-content: flex-start; }
+  .qp-search-actions { width: 100%; justify-content: flex-start; }
   .reset-btn-wrap { margin-left: auto; }
   .qp-group-time .qp-label,
-  .qp-group-search .qp-label { align-self: auto; }
+  .qp-group-search .qp-label { display: none; }
 
   .country-suggest {
     z-index: 900;
