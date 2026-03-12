@@ -1,6 +1,6 @@
 import { buildQuery } from './query.js';
 import {
-  fetchAndRender, filterByTimespan, setSortOrder, loadMore, hasCachedData,
+  fetchAndRender, setSortOrder, loadMore, hasCachedData,
   setTranslateEnabled, setTranslateLanguage, toggleSelectMode, clearSelection, selectAll,
   getSelectedArticles, setSelectionChangeCallback,
   setOnRenderCallback, setOnTranslateCallback, setUiStrings,
@@ -16,6 +16,7 @@ const LS_KEY = 'nm_default';
 let countryNames = [];
 let activeCountrySuggestion = -1;
 let _hybridStatusActive = false;
+let _pendingTranslateResolve = null;
 
 const el  = id  => document.getElementById(id);
 const qsa = sel => [...document.querySelectorAll(sel)];
@@ -454,13 +455,73 @@ function showToast(msg, ms = 2500) {
   setTimeout(() => t.classList.remove('toast-visible'), ms);
 }
 
-function setHybridStatus(state) {
+let _hybridRetryTimeout = null;
+
+function clearHybridRetry() {
+  if (_hybridRetryTimeout) { clearTimeout(_hybridRetryTimeout); _hybridRetryTimeout = null; }
+}
+
+function setHybridStatus(state, { msg = '', retryIn = 0, onRetry = null } = {}) {
   const container = el('hybridHeadlines');
   if (!container) return;
+  clearHybridRetry();
   _hybridStatusActive = !!state;
-  if (!state) return;
-  const msg = state === 'downloading' ? t('downloading') : t('translating');
-  container.innerHTML = `<div class="hybrid-status"><div class="spinner"></div><span class="hybrid-status-msg">${msg}</span></div>`;
+  if (!state) { container.innerHTML = ''; return; }
+
+  const isError = state === 'error';
+  const statusMsg = msg || (state === 'downloading' ? t('downloading') : t('translating'));
+
+  let countdownHtml = '';
+  let retryBtnHtml  = '';
+  if (isError && retryIn > 0) {
+    countdownHtml = `<span class="hybrid-status-countdown" id="hybridRetryCountdown">${retryIn}s</span>`;
+    retryBtnHtml  = `<button class="hybrid-retry-btn" id="hybridRetryNowBtn">${t('tryAgain')}</button>`;
+  }
+
+  container.innerHTML = `
+    <div class="hybrid-status">
+      <div class="hybrid-progress-track">
+        <div class="hybrid-progress-bar${isError ? ' error' : ''}" id="hybridProgressBar"></div>
+      </div>
+      <div class="hybrid-status-row">
+        <span class="hybrid-status-msg">${statusMsg}</span>
+        ${countdownHtml}
+      </div>
+      ${retryBtnHtml}
+    </div>`;
+
+  // animate bar
+  const bar = el('hybridProgressBar');
+  if (bar) {
+    if (isError) {
+      bar.style.width = '100%';
+    } else {
+      requestAnimationFrame(() => { bar.style.width = '60%'; });
+      setTimeout(() => { if (bar.isConnected) bar.style.width = '85%'; }, 3000);
+    }
+  }
+
+  // countdown + auto-retry
+  if (isError && retryIn > 0 && onRetry) {
+    let remaining = retryIn;
+    const tick = () => {
+      remaining--;
+      const cdEl = el('hybridRetryCountdown');
+      if (cdEl) cdEl.textContent = `${remaining}s`;
+      if (remaining > 0) {
+        _hybridRetryTimeout = setTimeout(tick, 1000);
+      } else {
+        onRetry();
+      }
+    };
+    _hybridRetryTimeout = setTimeout(tick, 1000);
+
+    // manual retry button
+    el('hybridRetryNowBtn')?.addEventListener('click', () => {
+      clearHybridRetry();
+      onRetry();
+    });
+  }
 }
 
 function setSearchLoading(on) {
@@ -473,12 +534,71 @@ function setSearchLoading(on) {
 
 async function runQuery(query, timespan) {
   setSearchLoading(true);
+  clearHybridRetry();
+  let attempt = 0;
+  const MAX_ATTEMPTS = 2;
+  const DELAY_MS = 10000;
+
+  const doAttempt = async () => {
+    attempt++;
+    setHybridStatus('downloading');
+    // animate bar to near-full over 10s, then fire
+    await new Promise(resolve => {
+      const bar = el('hybridProgressBar');
+      if (bar) {
+        requestAnimationFrame(() => { bar.style.transition = `width ${DELAY_MS}ms linear`; bar.style.width = '90%'; });
+      }
+      setTimeout(resolve, DELAY_MS);
+    });
+    // complete the bar right before fetch
+    const bar = el('hybridProgressBar');
+    if (bar) { bar.style.transition = 'width 0.3s ease'; bar.style.width = '95%'; }
+
+    try {
+      await fetchAndRender(query, timespan);
+      // success — complete the bar briefly
+      if (bar && bar.isConnected) { bar.style.width = '100%'; }
+      // translating cycle for non-English — resolves early if callback fires
+      if (currentUiLanguage !== 'en') {
+        const TRANSLATE_DELAY = 4000;
+        await new Promise(resolve => {
+          _pendingTranslateResolve = resolve;
+          setHybridStatus('translating');
+          const tBar = el('hybridProgressBar');
+          if (tBar) {
+            requestAnimationFrame(() => { tBar.style.transition = `width ${TRANSLATE_DELAY}ms linear`; tBar.style.width = '90%'; });
+          }
+          setTimeout(() => {
+            if (_pendingTranslateResolve === resolve) {
+              _pendingTranslateResolve = null;
+              resolve();
+            }
+          }, TRANSLATE_DELAY);
+        });
+        _pendingTranslateResolve = null;
+      }
+      if (currentView === 'hybrid') renderHybridList(getVisibleArticles());
+    } catch (err) {
+      if (attempt < MAX_ATTEMPTS) {
+        setHybridStatus('error', {
+          msg: t('requestTimedOut') || 'Request failed. Retrying…',
+          retryIn: 10,
+          onRetry: doAttempt,
+        });
+      } else {
+        setHybridStatus('error', { msg: t('unableLoadHeadlines') || 'Unable to load. Please retry.' });
+        if (currentView === 'hybrid') renderHybridList(getVisibleArticles());
+      }
+    }
+  };
+
   try {
     if (hasCachedData(query, timespan)) {
-      filterByTimespan(timespan);
-    } else {
-      setHybridStatus('downloading');
+      // fetchAndRender handles the cache hit internally (sets _allArticles from cache)
       await fetchAndRender(query, timespan);
+      if (currentView === 'hybrid') renderHybridList(getVisibleArticles());
+    } else {
+      await doAttempt();
     }
   } finally {
     setSearchLoading(false);
@@ -497,6 +617,7 @@ function relocateQueryPanel(view) {
 function switchView(view) {
   currentView = view;
   relocateQueryPanel(view);
+  relocateSelBar(view);
   qsa('.view-btn').forEach(b => {
     const on = b.dataset.view === view;
     b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on));
@@ -509,7 +630,6 @@ function switchView(view) {
   if (th)  th.style.display  = view === 'headlines' ? '' : 'none';
   if (thh) thh.style.display = view === 'hybrid'    ? '' : 'none';
   if (view === 'hybrid') showHybrid();
-  positionSelBar();
 }
 
 function renderHybridList(articles) {
@@ -649,28 +769,20 @@ function restoreFromURL() {
 
 function updateSelBar(count) {
   const bar = el('selBar');
-  if (!bar) return;
-  bar.classList.toggle('sel-bar-visible', count > 0);
-  positionSelBar();
+  if (bar) bar.classList.toggle('sel-bar-visible', selectModeOn);
   const lbl = el('selBarCount'); if (lbl) lbl.textContent = t('selectedCount', { count });
 }
 
-function positionSelBar() {
+function relocateSelBar(view) {
   const bar = el('selBar');
   if (!bar) return;
-  if (currentView === 'hybrid' && bar.classList.contains('sel-bar-visible')) {
-    const mapEl = el('hybridMapContainer');
-    if (!mapEl) return;
-    const mapTop = mapEl.getBoundingClientRect().top;
-    const barH = bar.getBoundingClientRect().height || 48;
-    bar.classList.add('sel-bar-over-map');
-    bar.style.top = `${Math.max(0, mapTop - Math.round(barH / 2))}px`;
-    bar.style.bottom = 'auto';
-    return;
+  if (view === 'hybrid') {
+    const dock = el('hybridHeadlines');
+    if (dock && bar.nextSibling !== dock) dock.parentElement?.insertBefore(bar, dock);
+  } else {
+    const dock = el('hlGrid');
+    if (dock && bar.nextSibling !== dock) dock.parentElement?.insertBefore(bar, dock);
   }
-  bar.classList.remove('sel-bar-over-map');
-  bar.style.top = '';
-  bar.style.bottom = '0';
 }
 
 function esc(s) {
@@ -729,7 +841,7 @@ function wireEvents() {
     el('hlSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
     el('hybridSelectBtn')?.classList.toggle('active', selectModeOn);
     el('hybridSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
-    if (!selectModeOn) updateSelBar(0);
+    updateSelBar(selectModeOn ? getSelectedArticles().length : 0);
   });
   el('hybridSelectBtn')?.addEventListener('click', () => {
     selectModeOn = !selectModeOn;
@@ -738,7 +850,7 @@ function wireEvents() {
     el('hlSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
     el('hybridSelectBtn')?.classList.toggle('active', selectModeOn);
     el('hybridSelectBtn')?.setAttribute('aria-pressed', String(selectModeOn));
-    if (!selectModeOn) updateSelBar(0);
+    updateSelBar(selectModeOn ? getSelectedArticles().length : 0);
   });
   el('selSelectAllBtn')?.addEventListener('click', selectAll);
   el('selShareBtn')?.addEventListener('click', shareSelected);
@@ -815,16 +927,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentView === 'hybrid') { updateHybridMap(getMapArticles(), getCountryFilter()); renderHybridList(getVisibleArticles()); }
   });
   setOnTranslateCallback(state => {
-    if (state === 'start' && _hybridStatusActive) setHybridStatus('translating');
+    if (state === 'end' && _pendingTranslateResolve) {
+      const res = _pendingTranslateResolve;
+      _pendingTranslateResolve = null;
+      res();
+    }
   });
   setupPullToRefresh();
   switchView('hybrid');
   if (isPageReload()) {
     const cleanUrl = `${window.location.origin}${window.location.pathname}`;
     if (window.location.search) window.history.replaceState({}, '', cleanUrl);
-    window.addEventListener('resize', positionSelBar, { passive: true });
-    return;
+      return;
   }
   restoreFromURL();
-  window.addEventListener('resize', positionSelBar, { passive: true });
-});
+});  

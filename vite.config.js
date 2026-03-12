@@ -8,7 +8,14 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    port: 5200,
     open: true,
+    proxy: {
+      '/api/gdelt': {
+        target: 'https://api.gdeltproject.org',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/gdelt/, '/api/v2/doc/doc'),
+      },
+    },
   },
 });

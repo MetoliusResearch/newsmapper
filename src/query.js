@@ -54,8 +54,8 @@ export function buildQuery({ resource = '', region = '', country = '' } = {}) {
   return parts.join(' AND ');
 }
 
-export function buildArtListUrl(query, timespan = '7d', maxrecords = 250) {
-  return `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=${maxrecords}&timespan=${timespan}&format=json`;
+export function buildArtListUrl(query, timespan = '7d', maxrecords = 250, base = 'https://api.gdeltproject.org/api/v2/doc/doc') {
+  return `${base}?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=${maxrecords}&timespan=${timespan}&format=json`;
 }
 
 export function timespanLabel(ts) {

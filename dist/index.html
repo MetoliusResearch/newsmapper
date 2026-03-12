@@ -18,8 +18,8 @@
   <title>NewsMapper 2.0 — Natural Resources</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <script type="module" crossorigin src="./assets/index-CEU3ofS-.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-8Bk5fDpC.css">
+  <script type="module" crossorigin src="./assets/index-B_t0D9rT.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DhkQ1Jr0.css">
 </head>
 <body>
   <header class="topbar">
@@ -42,6 +42,96 @@
       </select>
     </nav>
   </header>
+
+  <div id="queryPanelDock">
+    <section class="query-panel" id="queryPanel" aria-label="Search query">
+      <div class="query-panel-inner">
+        <div class="qp-group">
+          <label class="qp-label" id="lblResource" for="resourceSelect">Resource</label>
+          <div class="qp-select-wrap">
+            <select id="resourceSelect" class="qp-select" aria-label="Select resource">
+              <option value="">— Select —</option>
+              <optgroup label="Fossil Fuels">
+                <option value="Oil">Oil</option>
+                <option value="LNG">LNG / Natural Gas</option>
+                <option value="Coal">Coal</option>
+                <option value="Fossil Fuels">Fossil Fuels</option>
+              </optgroup>
+              <optgroup label="Mining">
+                <option value="Mining">Mining (broad)</option>
+                <option value="Gold">Gold</option>
+                <option value="Silver">Silver</option>
+                <option value="Copper">Copper</option>
+                <option value="Lithium">Lithium</option>
+                <option value="Cobalt">Cobalt</option>
+                <option value="Nickel">Nickel</option>
+                <option value="Iron">Iron Ore</option>
+                <option value="Uranium">Uranium</option>
+                <option value="Critical Minerals">Critical Minerals</option>
+              </optgroup>
+              <optgroup label="Agriculture / Land">
+                <option value="Palm Oil">Palm Oil</option>
+                <option value="Soy">Soy</option>
+                <option value="Cattle/Beef">Cattle / Beef</option>
+                <option value="Logging">Logging / Timber</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="qp-and" aria-hidden="true">AND</div>
+
+        <div class="qp-group">
+          <label class="qp-label" id="lblRegion" for="regionSelect">Region</label>
+          <div class="qp-select-wrap">
+            <select id="regionSelect" class="qp-select" aria-label="Select region">
+              <option value="">— Select —</option>
+              <option value="Africa">Africa</option>
+              <option value="Asia">Asia</option>
+              <option value="Europe">Europe</option>
+              <option value="Latin America">Latin America</option>
+              <option value="Amazon">Amazon</option>
+              <option value="Middle East">Middle East</option>
+              <option value="North America">North America</option>
+              <option value="Pacific">Pacific</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="qp-or" aria-hidden="true">OR</div>
+
+        <div class="qp-group qp-group-country">
+          <label class="qp-label" id="lblCountry" for="countryInput">Country</label>
+          <div class="qp-select-wrap">
+            <input id="countryInput" class="qp-select" type="text" placeholder="— Type Name —" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Select country" aria-haspopup="listbox" />
+            <div id="countrySuggest" class="country-suggest" role="listbox" aria-label="Country suggestions" hidden></div>
+          </div>
+        </div>
+
+        <div class="qp-group qp-group-time">
+          <label class="qp-label" id="lblTimespan">Timespan</label>
+          <div class="qp-time-btns" role="group" aria-label="Select timespan">
+            <button class="time-btn" data-timespan="1d">1d</button>
+            <button class="time-btn active" data-timespan="7d" aria-pressed="true">7d</button>
+            <button class="time-btn" data-timespan="30d">30d</button>
+          </div>
+        </div>
+
+        <div class="qp-group qp-group-search">
+          <span class="qp-label" id="lblSearch">Search</span>
+          <div class="qp-search-actions">
+            <button class="search-btn" id="searchBtn" type="button" title="Search" aria-label="Search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+            <button class="reset-btn" id="resetBtn" type="button" title="Full reset" aria-label="Full reset">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M20.49 15a9 9 0 1 1 .51-9"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
 
   <main class="app-main" id="appMain">
 
@@ -82,7 +172,31 @@
     <div class="view-panel active" id="viewHybrid" role="region" aria-label="Hybrid map + headlines">
       <button class="map-toggle-btn" id="mapToggleBtn" type="button" aria-pressed="false" title="Hide map">Hide map</button>
       <div id="hybridMapContainer"></div>
+      <div id="hybridQueryDock"></div>
+      <div class="hybrid-controls">
+        <div class="hl-toolbar hybrid-toolbar" id="toolbarHybrid">
+          <span class="hl-count" id="hybridHlCount"></span>
+          <button class="aqb-save-default" id="hybridSetDefaultBtn" title="Save current query as default" aria-label="Save as default">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            Set default
+          </button>
+          <div class="hl-filter-wrap">
+            <label for="hybridSortSelect" class="sr-only">Sort hybrid headlines by</label>
+            <select id="hybridSortSelect" class="hl-sort-select" aria-label="Sort hybrid headlines">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+            </select>
+          </div>
+          <button class="hl-select-btn" id="hybridSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Select
+          </button>
+        </div>
+      </div>
       <div id="hybridHeadlines" class="hybrid-headlines"></div>
+      <div class="hl-loadmore-wrap" id="hybridLoadMoreWrap" style="display:none;">
+        <button class="loadmore-btn" id="hybridLoadMoreBtn">Load more</button>
+      </div>
     </div>
 
   </main>
@@ -107,113 +221,7 @@
         Select
       </button>
     </div>
-    <div class="hl-toolbar hybrid-toolbar" id="toolbarHybrid">
-      <span class="hl-count" id="hybridHlCount"></span>
-      <button class="aqb-save-default" id="hybridSetDefaultBtn" title="Save current query as default" aria-label="Save as default">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-        Set default
-      </button>
-      <div class="hl-filter-wrap">
-        <label for="hybridSortSelect" class="sr-only">Sort hybrid headlines by</label>
-        <select id="hybridSortSelect" class="hl-sort-select" aria-label="Sort hybrid headlines">
-          <option value="date-desc">Newest first</option>
-          <option value="date-asc">Oldest first</option>
-        </select>
-      </div>
-      <button class="hl-select-btn" id="hybridSelectBtn" type="button" title="Select articles to share or export" aria-pressed="false">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        Select
-      </button>
-    </div>
   </div>
-
-  <section class="query-panel" id="queryPanel" aria-label="Search query">
-    <div class="query-panel-inner">
-      <div class="qp-group">
-        <label class="qp-label" id="lblResource" for="resourceSelect">Resource</label>
-        <div class="qp-select-wrap">
-          <select id="resourceSelect" class="qp-select" aria-label="Select resource">
-            <option value="">— Select —</option>
-            <optgroup label="Fossil Fuels">
-              <option value="Oil">Oil</option>
-              <option value="LNG">LNG / Natural Gas</option>
-              <option value="Coal">Coal</option>
-              <option value="Fossil Fuels">Fossil Fuels</option>
-            </optgroup>
-            <optgroup label="Mining">
-              <option value="Mining">Mining (broad)</option>
-              <option value="Gold">Gold</option>
-              <option value="Silver">Silver</option>
-              <option value="Copper">Copper</option>
-              <option value="Lithium">Lithium</option>
-              <option value="Cobalt">Cobalt</option>
-              <option value="Nickel">Nickel</option>
-              <option value="Iron">Iron Ore</option>
-              <option value="Uranium">Uranium</option>
-              <option value="Critical Minerals">Critical Minerals</option>
-            </optgroup>
-            <optgroup label="Agriculture / Land">
-              <option value="Palm Oil">Palm Oil</option>
-              <option value="Soy">Soy</option>
-              <option value="Cattle/Beef">Cattle / Beef</option>
-              <option value="Logging">Logging / Timber</option>
-            </optgroup>
-          </select>
-        </div>
-      </div>
-
-      <div class="qp-and" aria-hidden="true">AND</div>
-
-      <div class="qp-group">
-        <label class="qp-label" id="lblRegion" for="regionSelect">Region</label>
-        <div class="qp-select-wrap">
-          <select id="regionSelect" class="qp-select" aria-label="Select region">
-            <option value="">— Select —</option>
-            <option value="Africa">Africa</option>
-            <option value="Asia">Asia</option>
-            <option value="Europe">Europe</option>
-            <option value="Latin America">Latin America</option>
-            <option value="Amazon">Amazon</option>
-            <option value="Middle East">Middle East</option>
-            <option value="North America">North America</option>
-            <option value="Pacific">Pacific</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="qp-or" aria-hidden="true">OR</div>
-
-      <div class="qp-group qp-group-country">
-        <label class="qp-label" id="lblCountry" for="countryInput">Country</label>
-        <div class="qp-select-wrap">
-          <input id="countryInput" class="qp-select" type="text" placeholder="— Type Name —" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Select country" aria-haspopup="listbox" />
-          <div id="countrySuggest" class="country-suggest" role="listbox" aria-label="Country suggestions" hidden></div>
-        </div>
-      </div>
-
-      <div class="qp-group qp-group-time">
-        <label class="qp-label" id="lblTimespan">Timespan</label>
-        <div class="qp-time-btns" role="group" aria-label="Select timespan">
-          <button class="time-btn" data-timespan="1d">1d</button>
-          <button class="time-btn active" data-timespan="7d" aria-pressed="true">7d</button>
-          <button class="time-btn" data-timespan="30d">30d</button>
-        </div>
-      </div>
-
-      <div class="qp-group qp-group-search">
-        <span class="qp-label" id="lblSearch">Search</span>
-        <div class="qp-search-actions">
-          <button class="search-btn" id="searchBtn" type="button" title="Search" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button class="reset-btn" id="resetBtn" type="button" title="Full reset" aria-label="Full reset">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M20.49 15a9 9 0 1 1 .51-9"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

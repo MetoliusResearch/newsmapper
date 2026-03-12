@@ -1,7 +1,10 @@
 import { buildArtListUrl } from './query.js';
 
+const IS_DEV = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const GDELT_BASE = IS_DEV ? '/api/gdelt' : 'https://api.gdeltproject.org/api/v2/doc/doc';
+
 const CACHE_TTL        = 10 * 60 * 1000;
-const REQUEST_TIMEOUT_MS = 6000;
+const REQUEST_TIMEOUT_MS = 25000;
 const TRANSLATE_TIMEOUT_MS = 2500;
 const MAX_ARTICLE_RECORDS = 75;
 const PERSISTED_CACHE_KEY = 'nm_headline_cache_v1';
@@ -105,7 +108,7 @@ export async function fetchAndRender(query, timespan) {
   const onCancel = () => { _cancelCtrl?.abort('user'); };
   cancelBtn?.addEventListener('click', onCancel, { once: true });
 
-  const url = buildArtListUrl(query, timespan, MAX_ARTICLE_RECORDS);
+  const url = buildArtListUrl(query, timespan, MAX_ARTICLE_RECORDS, GDELT_BASE);
   let resp = null, cancelled = false, timedOut = false;
 
   try {
@@ -125,13 +128,13 @@ export async function fetchAndRender(query, timespan) {
   if (!resp) {
     const msg = timedOut ? _uiText.requestTimedOut : _uiText.unableLoadHeadlines;
     setState('error', msg);
-    return;
+    throw new Error(msg);
   }
 
   try {
     if (resp.status === 429) {
       setState('error', _uiText.rateLimited);
-      return;
+      throw new Error(_uiText.rateLimited);
     }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
@@ -141,6 +144,7 @@ export async function fetchAndRender(query, timespan) {
     renderFiltered();
   } catch (err) {
     setState('error', err.message);
+    throw err;
   }
 }
 
@@ -330,7 +334,8 @@ function articleRow(art) {
   const shouldTranslate = _translateEnabled && shouldTranslateTitle(sourceLanguage);
   const origAttr = (shouldTranslate && !cached) ? ` data-orig="${title}"` : '';
   const imgUrl  = art.socialimage ? safeUrl(art.socialimage) : '';
-  const thumb   = imgUrl && imgUrl !== '#' ? `<span class="art-thumb"><img src="${imgUrl}" loading="lazy" alt="" onerror="this.closest('.art-thumb').style.display='none'"></span>` : '';
+  const imgHttps = imgUrl && imgUrl.startsWith('https://') ? imgUrl : '';
+  const thumb   = imgHttps ? `<span class="art-thumb"><img src="${imgHttps}" loading="lazy" alt="" onerror="this.closest('.art-thumb').style.display='none'"></span>` : '';
   const sourcePill = sourceCount > 1
     ? `<button class="art-source-pill" type="button" aria-label="Show ${sourceCount} sources">${sourceCount} sources</button>`
     : '';
