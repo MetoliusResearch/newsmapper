@@ -3,11 +3,14 @@ import { buildArtListUrl } from './query.js';
 const CACHE_TTL        = 10 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 6000;
 const TRANSLATE_TIMEOUT_MS = 2500;
+const MAX_ARTICLE_RECORDS = 75;
+const PERSISTED_CACHE_KEY = 'nm_headline_cache_v1';
+const PERSISTED_CACHE_LIMIT = 12;
 
 const _articleCache = new Map();
 
 let _allArticles = [], _currentQuery = '', _currentTimespan = '7d';
-let _pageSize = 40, _visibleCount = _pageSize, _sortOrder = 'date-desc';
+let _pageSize = 50, _visibleCount = _pageSize, _sortOrder = 'date-desc';
 let _translateEnabled = true;
 let _translateLanguage = 'en';
 let _countryFilterKey = '', _countryFilterLabel = '';
@@ -41,11 +44,42 @@ let _cancelCtrl = null;
 
 const el = id => document.getElementById(id);
 
+hydratePersistedCache();
+
 function getCached(query, timespan) {
   const c = _articleCache.get(query + '|' + timespan);
   if (!c) return null;
-  if (Date.now() - c.ts > CACHE_TTL) { _articleCache.delete(query + '|' + timespan); return null; }
+  if (Date.now() - c.ts > CACHE_TTL) {
+    _articleCache.delete(query + '|' + timespan);
+    persistCache();
+    return null;
+  }
   return c.articles;
+}
+
+function hydratePersistedCache() {
+  try {
+    const raw = localStorage.getItem(PERSISTED_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    const now = Date.now();
+    for (const entry of parsed) {
+      if (!entry || typeof entry.key !== 'string' || !Array.isArray(entry.articles) || typeof entry.ts !== 'number') continue;
+      if (now - entry.ts > CACHE_TTL) continue;
+      _articleCache.set(entry.key, { articles: entry.articles, ts: entry.ts });
+    }
+  } catch {}
+}
+
+function persistCache() {
+  try {
+    const entries = [..._articleCache.entries()]
+      .sort((a, b) => b[1].ts - a[1].ts)
+      .slice(0, PERSISTED_CACHE_LIMIT)
+      .map(([key, value]) => ({ key, ts: value.ts, articles: value.articles }));
+    localStorage.setItem(PERSISTED_CACHE_KEY, JSON.stringify(entries));
+  } catch {}
 }
 
 async function attemptFetch(url, timeoutMs) {
@@ -71,7 +105,7 @@ export async function fetchAndRender(query, timespan) {
   const onCancel = () => { _cancelCtrl?.abort('user'); };
   cancelBtn?.addEventListener('click', onCancel, { once: true });
 
-  const url = buildArtListUrl(query, timespan, 250);
+  const url = buildArtListUrl(query, timespan, MAX_ARTICLE_RECORDS);
   let resp = null, cancelled = false, timedOut = false;
 
   try {
@@ -103,6 +137,7 @@ export async function fetchAndRender(query, timespan) {
     const data = await resp.json();
     _allArticles = data.articles || [];
     _articleCache.set(query + '|' + timespan, { articles: _allArticles, ts: Date.now() });
+    persistCache();
     renderFiltered();
   } catch (err) {
     setState('error', err.message);
@@ -181,6 +216,7 @@ export function setUiStrings(uiText = {}) {
 }
 export function getFilteredArticles() { return _filteredArticles; }
 export function getDisplayArticles() { return _displayArticles; }
+export function getVisibleArticles() { return _displayArticles.slice(0, _visibleCount); }
 export function getMapArticles() { return _mapArticles; }
 export function buildArticleRowsHtml(articles) { return (articles || []).map(articleRow).join(''); }
 export function setCountryFilter(country) {
@@ -257,6 +293,8 @@ async function renderFiltered() {
   if (cnt) cnt.textContent = `${_displayArticles.length.toLocaleString()} ${articleWord}${countryLabel}${cacheLabel}`;
   const wrap = el('hlLoadMoreWrap');
   if (wrap) wrap.style.display = _visibleCount < _displayArticles.length ? 'flex' : 'none';
+  const hybridWrap = el('hybridLoadMoreWrap');
+  if (hybridWrap) hybridWrap.style.display = _visibleCount < _displayArticles.length ? 'flex' : 'none';
   _onRenderCallback?.(_filteredArticles);
   if (_translateEnabled) void translateNewTitles();
 }
@@ -372,6 +410,7 @@ function setState(state, msg = '') {
   });
   const grid = el('hlGrid'); if (grid) grid.style.display = 'none';
   const wrap = el('hlLoadMoreWrap'); if (wrap) wrap.style.display = 'none';
+  const hybridWrap = el('hybridLoadMoreWrap'); if (hybridWrap) hybridWrap.style.display = 'none';
   const cnt = el('hlCount');
   if (state === 'results') {
     if (grid) grid.style.display = '';
@@ -399,6 +438,8 @@ function syncStaticUiText() {
   if (retry) retry.textContent = _uiText.tryAgain;
   const loadMoreBtn = el('hlLoadMoreBtn');
   if (loadMoreBtn) loadMoreBtn.textContent = _uiText.loadMore;
+  const hybridLoadMoreBtn = el('hybridLoadMoreBtn');
+  if (hybridLoadMoreBtn) hybridLoadMoreBtn.textContent = _uiText.loadMore;
 }
 
 function parseDate(s) {

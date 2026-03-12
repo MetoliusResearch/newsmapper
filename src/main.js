@@ -5,7 +5,7 @@ import {
   getSelectedArticles, setSelectionChangeCallback,
   setOnRenderCallback, setOnTranslateCallback, setUiStrings,
   setCountryFilter, getCountryFilter,
-  getDisplayArticles, buildArticleRowsHtml, getMapArticles,
+  getDisplayArticles, getVisibleArticles, buildArticleRowsHtml, getMapArticles,
 } from './headlines.js';
 import { initHybridMap, updateHybridMap, setMapCountryClickHandler, setMapUiStrings } from './mapview.js';
 import { COUNTRY_COORDS } from './countries.js';
@@ -485,8 +485,18 @@ async function runQuery(query, timespan) {
   }
 }
 
+function relocateQueryPanel(view) {
+  const panel = el('queryPanel');
+  const hybridDock = el('hybridQueryDock');
+  const defaultDock = el('queryPanelDock');
+  if (!panel || !hybridDock || !defaultDock) return;
+  const targetDock = view === 'hybrid' ? hybridDock : defaultDock;
+  if (panel.parentElement !== targetDock) targetDock.appendChild(panel);
+}
+
 function switchView(view) {
   currentView = view;
+  relocateQueryPanel(view);
   qsa('.view-btn').forEach(b => {
     const on = b.dataset.view === view;
     b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on));
@@ -518,8 +528,9 @@ function showHybrid() {
   initHybridMap('hybridMapContainer');
   const rawArts = getMapArticles();
   const displayArts = getDisplayArticles();
+  const visibleArts = getVisibleArticles();
   updateHybridMap(rawArts, getCountryFilter());
-  renderHybridList(displayArts);
+  renderHybridList(visibleArts);
   updateViewStatus('hybrid', displayArts.length);
 }
 
@@ -769,6 +780,7 @@ function wireEvents() {
     setSortOrder(value);
   });
   el('hlLoadMoreBtn')?.addEventListener('click', loadMore);
+  el('hybridLoadMoreBtn')?.addEventListener('click', loadMore);
   el('hlRetryBtn')?.addEventListener('click', () => { if (lastBuiltQuery) runQuery(lastBuiltQuery, currentTimespan); });
 }
 
@@ -800,7 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setMapCountryClickHandler(({ country }) => applyCountryFilterFromMap(country));
   setOnRenderCallback(articles => {
     updateViewStatus('hybrid', getDisplayArticles().length);
-    if (currentView === 'hybrid') { updateHybridMap(getMapArticles(), getCountryFilter()); renderHybridList(getDisplayArticles()); }
+    if (currentView === 'hybrid') { updateHybridMap(getMapArticles(), getCountryFilter()); renderHybridList(getVisibleArticles()); }
   });
   setOnTranslateCallback(state => {
     if (state === 'start' && _hybridStatusActive) setHybridStatus('translating');
