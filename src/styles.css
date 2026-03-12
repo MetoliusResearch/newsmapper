@@ -1122,6 +1122,45 @@ html, body {
   text-align: center;
 }
 
+.map-dot-selected-wrap {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+.map-dot-selected-wrap::before {
+  display: none;
+}
+
+.map-dot-selected-wrap .leaflet-tooltip-content {
+  margin: 0;
+}
+
+.map-dot-selected-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #000;
+  line-height: 1.15;
+  text-shadow: 0 0 3px rgba(255,255,255,0.7), 0 0 6px rgba(255,255,255,0.5);
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 56px;
+}
+
+.map-dot-selected-label strong {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.map-dot-selected-label span {
+  font-size: 9px;
+  font-weight: 600;
+}
+
 
 #viewHybrid {
   flex-direction: column;
@@ -1443,45 +1482,6 @@ body { top: 0 !important; }
 
   .sel-bar {
     padding: 0.5rem 0.65rem;
-  }
-
-  .map-dot-selected-wrap {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  margin: 0;
-  }
-
-  .map-dot-selected-wrap::before {
-  display: none;
-  }
-
-  .map-dot-selected-wrap .leaflet-tooltip-content {
-  margin: 0;
-  }
-
-  .map-dot-selected-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: #ffffff;
-  line-height: 1.15;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  font-size: 10px;
-  font-weight: 600;
-  min-width: 56px;
-  }
-
-  .map-dot-selected-label strong {
-  font-size: 10px;
-  font-weight: 700;
-  }
-
-  .map-dot-selected-label span {
-  font-size: 9px;
-  font-weight: 600;
   }
 
   .qp-label { font-size: 0.62rem; }

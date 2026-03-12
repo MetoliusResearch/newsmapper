@@ -130,7 +130,7 @@ function createMapInstance() {
       return;
     }
     const bounds = L.latLngBounds(points.map(([lat, lng]) => L.latLng(lat, lng)));
-    map.fitBounds(bounds, { padding: [10, 10], maxZoom: 6 });
+    map.fitBounds(bounds, { padding: [10, 10], maxZoom: 3 });
   }
 
   function setOnCountryClick(handler) {
