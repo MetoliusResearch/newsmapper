@@ -184,9 +184,15 @@ html, body {
   background-color: var(--accent);
 }
 
-@media (max-width: 500px) {
+@media (max-width: 640px) {
   .topbar-sub     { display: none; }
   .topbar-powered { display: none; }
+  .topbar-nav     { margin-left: auto; flex-shrink: 0; }
+  .topbar-language-select {
+    height: 20px;
+    min-width: 52px;
+    padding: 0 1rem 0 0.35rem;
+  }
 }
 
 
