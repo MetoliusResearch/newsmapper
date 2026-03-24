@@ -1451,7 +1451,6 @@ body { top: 0 !important; }
     text-align: left;
   }
 
-  /* Prevent iOS Safari auto-zoom on focus (requires font-size >= 16px) */
   .qp-select, .qp-input, .topbar-language-select { font-size: 16px; }
   .qp-select, .qp-input { width: 100%; min-width: 0; padding-left: 0.45rem; }
   #resourceSelect,

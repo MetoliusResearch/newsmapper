@@ -184,10 +184,6 @@ function setElementText(id, text) {
   node.append(document.createTextNode(` ${text}`));
 }
 
-function setElementHtml(id, html) {
-  setInnerHtml(el(id), html);
-}
-
 function setElementAttr(id, name, value) {
   const node = el(id);
   if (node) node.setAttribute(name, value);
@@ -490,7 +486,6 @@ function setHybridStatus(state, { msg = '', retryIn = 0, onRetry = null } = {}) 
       ${retryBtnHtml}
     </div>`;
 
-  // animate bar
   const bar = el('hybridProgressBar');
   if (bar) {
     if (isError) {
@@ -501,7 +496,6 @@ function setHybridStatus(state, { msg = '', retryIn = 0, onRetry = null } = {}) 
     }
   }
 
-  // countdown + auto-retry
   if (isError && retryIn > 0 && onRetry) {
     let remaining = retryIn;
     const tick = () => {
@@ -516,7 +510,6 @@ function setHybridStatus(state, { msg = '', retryIn = 0, onRetry = null } = {}) 
     };
     _hybridRetryTimeout = setTimeout(tick, 1000);
 
-    // manual retry button
     el('hybridRetryNowBtn')?.addEventListener('click', () => {
       clearHybridRetry();
       onRetry();
@@ -542,23 +535,22 @@ async function runQuery(query, timespan) {
   const doAttempt = async () => {
     attempt++;
     setHybridStatus('downloading');
-    // animate bar to near-full over 10s, then fire
-    await new Promise(resolve => {
-      const bar = el('hybridProgressBar');
-      if (bar) {
-        requestAnimationFrame(() => { bar.style.transition = `width ${DELAY_MS}ms linear`; bar.style.width = '90%'; });
-      }
-      setTimeout(resolve, DELAY_MS);
-    });
-    // complete the bar right before fetch
+    const delayMs = attempt === 1 ? 0 : DELAY_MS;
+    if (delayMs > 0) {
+      await new Promise(resolve => {
+        const bar = el('hybridProgressBar');
+        if (bar) {
+          requestAnimationFrame(() => { bar.style.transition = `width ${delayMs}ms linear`; bar.style.width = '90%'; });
+        }
+        setTimeout(resolve, delayMs);
+      });
+    }
     const bar = el('hybridProgressBar');
     if (bar) { bar.style.transition = 'width 0.3s ease'; bar.style.width = '95%'; }
 
     try {
       await fetchAndRender(query, timespan);
-      // success — complete the bar briefly
       if (bar && bar.isConnected) { bar.style.width = '100%'; }
-      // translating cycle for non-English — resolves early if callback fires
       if (currentUiLanguage !== 'en') {
         const TRANSLATE_DELAY = 4000;
         await new Promise(resolve => {
@@ -594,7 +586,6 @@ async function runQuery(query, timespan) {
 
   try {
     if (hasCachedData(query, timespan)) {
-      // fetchAndRender handles the cache hit internally (sets _allArticles from cache)
       await fetchAndRender(query, timespan);
       if (currentView === 'hybrid') renderHybridList(getVisibleArticles());
     } else {
@@ -672,13 +663,6 @@ function applyCountryFilterFromMap(country) {
   const input = el('countryInput');
   if (input) input.value = raw;
   showToast(t('filteredTo', { country: raw }));
-}
-
-function clearCountryFilterFromBar() {
-  setCountryFilter('');
-  const input = el('countryInput');
-  if (input) input.value = '';
-  showToast(t('countryFilterCleared'));
 }
 
 function applyTranslate(enabled) {
@@ -763,7 +747,7 @@ function restoreFromURL() {
     if (dflt.country  && el('countryInput'))   el('countryInput').value   = dflt.country;
     setActiveTimespanBtn(dflt.timespan || '7d');
     const q = buildQuery(readFormParams());
-    if (q) { lastBuiltQuery = q; showDefaultBadge(true); fetchAndRender(q, currentTimespan); }
+    if (q) { lastBuiltQuery = q; showDefaultBadge(true); runQuery(q, currentTimespan); }
   }
 }
 
@@ -826,6 +810,15 @@ function fullPageReset() {
 
 function wireEvents() {
   qsa('.view-btn[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
+  el('mapToggleBtn')?.addEventListener('click', () => {
+    const container = el('hybridMapContainer');
+    if (!container) return;
+    const hidden = container.style.display === 'none';
+    container.style.display = hidden ? '' : 'none';
+    setElementText('mapToggleBtn', hidden ? t('hideMap') : t('showMap'));
+    setElementAttr('mapToggleBtn', 'title', hidden ? t('hideMap') : t('showMap'));
+    el('mapToggleBtn')?.setAttribute('aria-pressed', String(!hidden));
+  });
   el('languageSelect')?.addEventListener('change', e => applyTranslationLanguage(e.target.value));
   qsa('.time-btn').forEach(b => b.addEventListener('click', () => {
     const ts = b.dataset.timespan; setActiveTimespanBtn(ts);

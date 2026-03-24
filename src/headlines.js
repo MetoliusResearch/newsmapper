@@ -148,9 +148,6 @@ export async function fetchAndRender(query, timespan) {
   }
 }
 
-export function filterByTimespan(timespan) {
-  _currentTimespan = timespan; _visibleCount = _pageSize; renderFiltered();
-}
 export function setSortOrder(order) {
   _sortOrder = order; _visibleCount = _pageSize; renderFiltered();
 }
@@ -218,7 +215,6 @@ export function setUiStrings(uiText = {}) {
   if (_allArticles.length) renderFiltered();
   else setState(_lastState, _lastErrorMessage);
 }
-export function getFilteredArticles() { return _filteredArticles; }
 export function getDisplayArticles() { return _displayArticles; }
 export function getVisibleArticles() { return _displayArticles.slice(0, _visibleCount); }
 export function getMapArticles() { return _mapArticles; }
@@ -227,12 +223,6 @@ export function setCountryFilter(country) {
   const raw = String(country || '').trim();
   _countryFilterLabel = raw;
   _countryFilterKey = raw.toLowerCase();
-  _visibleCount = _pageSize;
-  renderFiltered();
-}
-export function clearCountryFilter() {
-  _countryFilterKey = '';
-  _countryFilterLabel = '';
   _visibleCount = _pageSize;
   renderFiltered();
 }

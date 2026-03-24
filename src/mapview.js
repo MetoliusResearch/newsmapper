@@ -143,8 +143,6 @@ function createMapInstance() {
 const _main   = createMapInstance();
 const _hybrid = createMapInstance();
 
-export function initMap(containerId)       { _main.init(containerId); }
-export function updateMap(articles, selectedCountry) { _main.update(articles, selectedCountry); }
 export function initHybridMap(containerId) { _hybrid.init(containerId); }
 export function updateHybridMap(articles, selectedCountry) { _hybrid.update(articles, selectedCountry); }
 export function setMapCountryClickHandler(handler) {
