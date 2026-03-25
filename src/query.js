@@ -26,6 +26,8 @@ export const RESOURCE_MAP = {
   'Cattle/Beef': '(cattle OR beef)',
   Logging:     '((logging OR timber) AND forest)',
   Biofuels:    'biofuels',
+  Wind:        '("wind power" OR "wind energy" OR "wind farm" OR "wind turbine" OR windmill OR "wind mills")',
+  Hydropower:  '(hydropower OR hydroelectric OR "hydro power" OR "water power" OR dam)',
 };
 
 const REGION_MAP = {

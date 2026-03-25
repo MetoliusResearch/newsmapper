@@ -529,8 +529,8 @@ async function runQuery(query, timespan) {
   setSearchLoading(true);
   clearHybridRetry();
   let attempt = 0;
-  const MAX_ATTEMPTS = 2;
-  const DELAY_MS = 10000;
+  const MAX_ATTEMPTS = 3;
+  const DELAY_MS = 15000;
 
   const doAttempt = async () => {
     attempt++;
@@ -574,12 +574,11 @@ async function runQuery(query, timespan) {
       if (attempt < MAX_ATTEMPTS) {
         setHybridStatus('error', {
           msg: t('requestTimedOut') || 'Request failed. Retrying…',
-          retryIn: 10,
+          retryIn: 15,
           onRetry: doAttempt,
         });
       } else {
         setHybridStatus('error', { msg: t('unableLoadHeadlines') || 'Unable to load. Please retry.' });
-        if (currentView === 'hybrid') renderHybridList(getVisibleArticles());
       }
     }
   };
@@ -822,8 +821,6 @@ function wireEvents() {
   el('languageSelect')?.addEventListener('change', e => applyTranslationLanguage(e.target.value));
   qsa('.time-btn').forEach(b => b.addEventListener('click', () => {
     const ts = b.dataset.timespan; setActiveTimespanBtn(ts);
-    const hs = el('hybridSortSelect'); if (hs) hs.value = el('hlSortSelect')?.value || 'date-desc';
-    if (lastBuiltQuery) runQuery(lastBuiltQuery, ts);
   }));
   el('setDefaultBtn')?.addEventListener('click', saveDefault);
   el('hybridSetDefaultBtn')?.addEventListener('click', saveDefault);

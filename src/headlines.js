@@ -3,7 +3,7 @@ import { buildArtListUrl } from './query.js';
 const IS_DEV = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const GDELT_BASE = IS_DEV ? '/api/gdelt' : 'https://api.gdeltproject.org/api/v2/doc/doc';
 
-const CACHE_TTL        = 10 * 60 * 1000;
+const CACHE_TTL        = 15 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 25000;
 const TRANSLATE_TIMEOUT_MS = 2500;
 const MAX_ARTICLE_RECORDS = 75;
